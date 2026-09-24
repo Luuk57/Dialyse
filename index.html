@@ -44,22 +44,23 @@
     }
     h3 { margin: 0 0 6px 0; font-size: 11px; color: var(--text); text-align: left; }
     .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
     .btn {
       width: 100%; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px;
-      padding: 8px 6px; font-size: 11px; font-weight: 600; color: var(--text); cursor: pointer; text-align: center;
+      padding: 8px 6px; font-size: 10px; font-weight: 600; color: var(--text); cursor: pointer; text-align: center;
     }
     .btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     .btn-action {
       background: var(--primary); color: white; border: none; width: 100%; padding: 10px;
       border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 6px;
     }
-    input[type="date"], input[type="time"], input[type="text"] {
+    input[type="date"], input[type="time"], input[type="text"], select {
       width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; text-align: center; margin-bottom: 8px; background: #fff;
     }
     .label-text { font-size: 10px; font-weight: 600; color: #475569; text-align: left; margin-bottom: 2px; display: block; }
     .status-msg { margin-top: 4px; font-size: 9px; font-weight: 500; color: #16a34a; height: 12px; text-align: center; }
     
-    .receipt { background: #f0fdf4; border: 1px dashed #bbf7d0; border-radius: 6px; padding: 6px; text-align: left; max-height: 150px; overflow-y: auto; margin-bottom: 6px; }
+    .receipt { background: #f0fdf4; border: 1px dashed #bbf7d0; border-radius: 6px; padding: 6px; text-align: left; max-height: 180px; overflow-y: auto; margin-bottom: 6px; }
     .receipt-item { display: flex; justify-content: space-between; align-items: center; font-size: 10px; padding: 4px 0; border-bottom: 1px solid #dcfce7; }
     .session-badge { font-size: 8px; background: #e0f2fe; padding: 2px 4px; border-radius: 3px; color: #0369a1; font-weight: bold; }
     .item-del-btn { background: var(--danger); color: white; border: none; border-radius: 3px; width: 16px; height: 16px; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -72,7 +73,7 @@
 
     <!-- PLANNING KAART -->
     <div class="card">
-      <div class="date-header">Dialyse Inplanning</div>
+      <div class="date-header">Dialyse Inplanning & Herhaling</div>
       
       <span class="label-text">Type Sessie:</span>
       <div class="grid" id="sessionTypeGrid">
@@ -80,11 +81,27 @@
         <button class="btn" onclick="setSessionType('Nacht', this)">🌙 Nachtdialyse</button>
       </div>
 
-      <span class="label-text">Datum:</span>
+      <span class="label-text">Startdatum:</span>
       <input type="date" id="dialysisDate">
 
       <span class="label-text">Starttijd:</span>
       <input type="time" id="dialysisTime">
+
+      <span class="label-text">Herhaling:</span>
+      <div class="grid-3" id="repetitionGrid">
+        <button class="btn active" onclick="setRepetition('Eenmalig', this)">Eenmalig</button>
+        <button class="btn" onclick="setRepetition('Dagelijks', this)">Dagelijks</button>
+        <button class="btn" onclick="setRepetition('Om de dag', this)">Om de dag</button>
+      </div>
+
+      <span class="label-text" id="repeatCountLabel" style="display:none;">Aantal herhalingen:</span>
+      <select id="repeatCount" style="display:none;">
+        <option value="3">3 keer</option>
+        <option value="5">5 keer</option>
+        <option value="10" selected>10 keer</option>
+        <option value="15">15 keer</option>
+        <option value="20">20 keer</option>
+      </select>
 
       <button class="btn-action" onclick="planDialyse()">Dialyse Inplannen</button>
       <div class="status-msg" id="statusMsgDialyse"></div>
@@ -100,13 +117,12 @@
   </div>
 
   <script>
-    // Gebruik dezelfde Web App URL als je hoofd-app zodat alles in dezelfde Google Sheet komt
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyK7M4BmbwfRuSmxzUsW3-MhOi3qMZjwUD6dU7-BERKyxK4D4MQw1wKOE89juo1ClC6/exec'; 
 
     let selectedSessionType = 'Dag';
+    let selectedRepetition = 'Eenmalig';
     let dialysisData = [];
 
-    // Zet standaard datum en tijd op vandaag / nu
     document.getElementById('dialysisDate').value = new Date().toISOString().slice(0, 10);
     document.getElementById('dialysisTime').value = new Date().toTimeString().slice(0, 5);
 
@@ -116,16 +132,28 @@
       selectedSessionType = type;
     }
 
+    function setRepetition(rep, btn) {
+      document.querySelectorAll('#repetitionGrid .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedRepetition = rep;
+      
+      let countLabel = document.getElementById('repeatCountLabel');
+      let countSelect = document.getElementById('repeatCount');
+      if (rep === 'Eenmalig') {
+        countLabel.style.display = 'none';
+        countSelect.style.display = 'none';
+      } else {
+        countLabel.style.display = 'block';
+        countSelect.style.display = 'block';
+      }
+    }
+
     function fetchDialysisData() {
       fetch(WEB_APP_URL)
         .then(response => response.json())
         .then(data => {
-          // We kunnen eventueel een apart veld of type 'Dialyse' inrichten in het script
-          if (data.dialysisLogs) {
-            dialysisData = data.dialysisLogs;
-          } else if (data.logs) {
-            // Filter eventueel op type Dialyse als we dat meesturen
-            dialysisData = data.logs.filter(item => item.type === 'Dialyse');
+          if (data.logs) {
+            dialysisData = data.logs.filter(item => item.type === 'DialysePlan');
           }
           renderDialysisUI();
         })
@@ -137,12 +165,15 @@
 
     function renderDialysisUI() {
       let receipt = document.getElementById('receiptListDialyse');
+      // Sorteer op datum/tijd oplopend
+      dialysisData.sort((a, b) => new Date(a.datum + ' ' + a.tijd) - new Date(b.datum + ' ' + b.tijd));
+
       if (dialysisData.length > 0) {
         receipt.innerHTML = "";
         dialysisData.forEach((item, idx) => {
           receipt.innerHTML += `
             <div class="receipt-item">
-              <span><b>${item.datum}</b> (${item.tijd}) <span class="session-badge">${item.typeSessie}</span></span>
+              <span><b>${item.datum}</b> (${item.tijd}) <span class="session-badge">${item.drinken}</span></span>
               <button class="item-del-btn" onclick="deleteDialysis(${idx})">✕</button>
             </div>`;
         });
@@ -152,35 +183,52 @@
     }
 
     function planDialyse() {
-      let datum = document.getElementById('dialysisDate').value;
+      let startDateStr = document.getElementById('dialysisDate').value;
       let tijd = document.getElementById('dialysisTime').value;
 
-      if (!datum || !tijd) {
-        alert("Vul een datum en tijd in.");
+      if (!startDateStr || !tijd) {
+        alert("Vul een startdatum en tijd in.");
         return;
       }
 
       document.getElementById('statusMsgDialyse').innerText = "Inplannen...";
-      
-      let params = {
-        action: 'add',
-        type: 'DialysePlan',
-        datum: datum,
-        tijd: tijd,
-        detail1: selectedSessionType,
-        detail2: ''
-      };
 
-      let url = WEB_APP_URL + '?' + new URLSearchParams(params).toString();
-      
-      fetch(url)
-        .then(response => response.json())
+      let datesToPlan = [];
+      let startDate = new Date(startDateStr);
+      let count = selectedRepetition === 'Eenmalig' ? 1 : parseInt(document.getElementById('repeatCount').value);
+      let stepDays = 1;
+
+      if (selectedRepetition === 'Om de dag') {
+        stepDays = 2;
+      } else if (selectedRepetition === 'Dagelijks') {
+        stepDays = 1;
+      }
+
+      for (let i = 0; i < count; i++) {
+        let d = new Date(startDate);
+        d.setDate(startDate.getDate() + (i * stepDays));
+        let dStr = d.toISOString().slice(0, 10);
+        datesToPlan.push(dStr);
+      }
+
+      let promises = datesToPlan.map(datum => {
+        let params = {
+          action: 'add',
+          type: 'DialysePlan',
+          datum: datum,
+          tijd: tijd,
+          detail1: selectedSessionType,
+          detail2: ''
+        };
+        let url = WEB_APP_URL + '?' + new URLSearchParams(params).toString();
+        return fetch(url);
+      });
+
+      Promise.all(promises)
         .then(() => {
           document.getElementById('statusMsgDialyse').innerText = "Ingepland & gesynchroniseerd! ✅";
-          setTimeout(() => { document.getElementById('statusMsgDialyse').innerText = ""; }, 1500);
-          // Voeg lokaal toe voor directe weergave
-          dialysisData.push({ datum, tijd, typeSessie: selectedSessionType });
-          renderDialysisUI();
+          setTimeout(() => { document.getElementById('statusMsgDialyse').innerText = ""; }, 2000);
+          fetchDialysisData(); // Haal direct alles vers op
         })
         .catch(() => {
           document.getElementById('statusMsgDialyse').innerText = "Inplannen mislukt";
@@ -195,7 +243,7 @@
           type: 'DialysePlan',
           datum: item.datum,
           tijd: item.tijd,
-          detail1: item.typeSessie,
+          detail1: item.drinken,
           detail2: ''
         };
         let url = WEB_APP_URL + '?' + new URLSearchParams(params).toString();
@@ -203,8 +251,7 @@
         fetch(url)
           .then(response => response.json())
           .then(() => {
-            dialysisData.splice(index, 1);
-            renderDialysisUI();
+            fetchDialysisData();
           })
           .catch(() => alert("Verwijderen mislukt"));
       }
