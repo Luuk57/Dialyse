@@ -87,6 +87,8 @@
     
     .nurse-box { border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 8px; max-height: 80px; overflow-y: auto; background: #fff; }
     .nurse-item { font-size: 10px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .checkbox-container { display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 11px; font-weight: bold; color: var(--text); cursor: pointer; }
+    .checkbox-container input { width: 16px; height: 16px; margin: 0; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -248,6 +250,11 @@
       <span class="label-text">Opmerkingen:</span>
       <textarea id="modalOpmerkingen" placeholder="Eventuele opmerkingen..."></textarea>
 
+      <!-- VINKJE OM UIT TE VOEREN / TE VERPLAATSEN -->
+      <label class="checkbox-container">
+        <input type="checkbox" id="modalIsExecuted"> Markeer als afgerond / uitgevoerd
+      </label>
+
       <button class="btn-action btn-success" onclick="saveExecutedDialysis()">Dialyse Opslaan / Afronden</button>
       <button class="btn btn-secondary" style="margin-top: 6px; width: 100%; padding: 8px;" onclick="closeModal()">Annuleren</button>
       <div class="status-msg" id="statusMsgModal"></div>
@@ -272,7 +279,6 @@
     document.getElementById('dialysisDate').value = todayStr;
     document.getElementById('dialysisTime').value = new Date().toTimeString().slice(0, 5);
     
-    // Standaard export periode: deze maand
     let firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 2).toISOString().slice(0, 10);
     document.getElementById('exportStart').value = firstDayOfMonth;
     document.getElementById('exportEnd').value = todayStr;
@@ -404,6 +410,7 @@
       document.getElementById('modalIjzer').value = 'Nee';
       document.getElementById('modalShuntflow').value = '';
       document.getElementById('modalOpmerkingen').value = '';
+      document.getElementById('modalIsExecuted').checked = false;
 
       renderNursesList();
       document.getElementById('statusMsgModal').innerText = '';
@@ -454,15 +461,11 @@
     }
 
     function saveExecutedDialysis() {
-      let startTime = document.getElementById('modalStartTime').value;
-      let stopTime = document.getElementById('modalStopTime').value;
-      let preWeight = document.getElementById('modalPreGewicht').value;
-      let postWeight = document.getElementById('modalPostGewicht').value;
-
-      if (!startTime || !stopTime || !preWeight || !postWeight) {
-        alert("Vul starttijd, stoptijd, pre-gewicht en post-gewicht volledig in.");
-        return;
-      }
+      let startTime = document.getElementById('modalStartTime').value || '-';
+      let stopTime = document.getElementById('modalStopTime').value || '-';
+      let preWeight = document.getElementById('modalPreGewicht').value || '-';
+      let postWeight = document.getElementById('modalPostGewicht').value || '-';
+      let isExecuted = document.getElementById('modalIsExecuted').checked;
 
       let selectedNurses = [];
       document.querySelectorAll('input[name="nurseChoice"]:checked').forEach(cb => {
@@ -496,6 +499,21 @@
 
       fetch(url)
         .then(response => response.json())
+        .then(() => {
+          // Als het vinkje "Uitgevoerd" aan staat, verwijder hem dan meteen uit de planning lijst
+          if (isExecuted && activeModalItem) {
+            let deleteParams = {
+              action: 'delete',
+              type: 'DialysePlan',
+              datum: activeModalItem.datum,
+              tijd: activeModalItem.tijd,
+              detail1: activeModalItem.drinken,
+              detail2: ''
+            };
+            let deleteUrl = WEB_APP_URL + '?' + new URLSearchParams(deleteParams).toString();
+            return fetch(deleteUrl);
+          }
+        })
         .then(() => {
           document.getElementById('statusMsgModal').innerText = "Opgeslagen! ✅";
           setTimeout(() => {
@@ -585,7 +603,6 @@
         return;
       }
 
-      // Filter uitgevoerde dialyses binnen de periode
       let executedLogs = allLogsCache.filter(item => {
         return item.type === 'DialyseUitgevoerd' && item.datum >= startStr && item.datum <= endStr;
       });
@@ -596,7 +613,6 @@
       }
 
       if (selectedExportFormat === 'csv') {
-        // Genereer CSV spreadsheet
         let csvContent = "data:text/csv;charset=utf-8,Datum;Tijd;Details;Stoptijd\n";
         executedLogs.forEach(row => {
           csvContent += `"${row.datum}";"${row.tijd}";"${row.drinken}";"${row.detail2}"\n`;
@@ -609,7 +625,6 @@
         link.click();
         document.body.removeChild(link);
       } else {
-        // Genereer PDF / Print overzicht
         let printWindow = window.open('', '_blank');
         let html = `
           <html>
