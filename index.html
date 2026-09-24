@@ -165,15 +165,22 @@
 
     function renderDialysisUI() {
       let receipt = document.getElementById('receiptListDialyse');
-      // Sorteer op datum/tijd oplopend
       dialysisData.sort((a, b) => new Date(a.datum + ' ' + a.tijd) - new Date(b.datum + ' ' + b.tijd));
 
       if (dialysisData.length > 0) {
         receipt.innerHTML = "";
         dialysisData.forEach((item, idx) => {
+          // Schoon de tijd op voor de weergave (neem alleen HH:mm als er een lange reeks staat)
+          let schoneTijd = item.tijd;
+          if (schoneTijd.includes('T')) {
+            schoneTijd = schoneTijd.split('T')[1].slice(0, 5);
+          } else if (schoneTijd.length > 5) {
+            schoneTijd = schoneTijd.slice(0, 5);
+          }
+
           receipt.innerHTML += `
             <div class="receipt-item">
-              <span><b>${item.datum}</b> (${item.tijd}) <span class="session-badge">${item.drinken}</span></span>
+              <span><b>${item.datum}</b> (${schoneTijd}) <span class="session-badge">${item.drinken}</span></span>
               <button class="item-del-btn" onclick="deleteDialysis(${idx})">✕</button>
             </div>`;
         });
@@ -216,7 +223,7 @@
           action: 'add',
           type: 'DialysePlan',
           datum: datum,
-          tijd: tijd,
+          tijd: "'" + tijd, // Zet er een apostrof voor zodat Google Sheets het als tekst behandelt i.p.v. datum-object
           detail1: selectedSessionType,
           detail2: ''
         };
@@ -228,7 +235,7 @@
         .then(() => {
           document.getElementById('statusMsgDialyse').innerText = "Ingepland & gesynchroniseerd! ✅";
           setTimeout(() => { document.getElementById('statusMsgDialyse').innerText = ""; }, 2000);
-          fetchDialysisData(); // Haal direct alles vers op
+          fetchDialysisData();
         })
         .catch(() => {
           document.getElementById('statusMsgDialyse').innerText = "Inplannen mislukt";
