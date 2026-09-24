@@ -57,9 +57,10 @@
     }
     .btn-success { background: var(--success); }
     .btn-secondary { background: #64748b; color: white; border: none; }
-    input[type="date"], input[type="time"], input[type="text"], input[type="number"], select {
+    input[type="date"], input[type="time"], input[type="text"], input[type="number"], select, textarea {
       width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; text-align: center; margin-bottom: 8px; background: #fff;
     }
+    textarea { text-align: left; resize: vertical; height: 50px; }
     .label-text { font-size: 10px; font-weight: 600; color: #475569; text-align: left; margin-bottom: 2px; display: block; }
     .status-msg { margin-top: 4px; font-size: 9px; font-weight: 500; color: #16a34a; height: 12px; text-align: center; }
     
@@ -84,7 +85,7 @@
     }
     .modal-title { font-size: 12px; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
     
-    .nurse-box { border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 8px; max-height: 90px; overflow-y: auto; background: #fff; }
+    .nurse-box { border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 8px; max-height: 80px; overflow-y: auto; background: #fff; }
     .nurse-item { font-size: 10px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
   </style>
 </head>
@@ -179,6 +180,55 @@
       <span class="label-text">Post-gewicht (kg):</span>
       <input type="number" step="0.1" id="modalPostGewicht" placeholder="Bijv. 121.0">
 
+      <!-- FRAGMIN 1, 2, 3 -->
+      <div class="grid-3">
+        <div>
+          <span class="label-text">Fragmin 1:</span>
+          <select id="modalFragmin1">
+            <option value="2500">2500</option>
+            <option value="5000">5000</option>
+          </select>
+        </div>
+        <div>
+          <span class="label-text">Fragmin 2:</span>
+          <select id="modalFragmin2">
+            <option value="2500">2500</option>
+            <option value="5000">5000</option>
+          </select>
+        </div>
+        <div>
+          <span class="label-text">Fragmin 3:</span>
+          <select id="modalFragmin3">
+            <option value="2500">2500</option>
+            <option value="5000">5000</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- EPO & IJZER -->
+      <div class="grid">
+        <div>
+          <span class="label-text">Epo:</span>
+          <select id="modalEpo">
+            <option value="Nee">Nee</option>
+            <option value="Ja">Ja</option>
+          </select>
+        </div>
+        <div>
+          <span class="label-text">Ijzer:</span>
+          <select id="modalIjzer">
+            <option value="Nee">Nee</option>
+            <option value="Ja">Ja</option>
+          </select>
+        </div>
+      </div>
+
+      <span class="label-text">Shuntflow meting:</span>
+      <input type="number" step="1" id="modalShuntflow" placeholder="Optioneel getal...">
+
+      <span class="label-text">Opmerkingen:</span>
+      <textarea id="modalOpmerkingen" placeholder="Eventuele opmerkingen..."></textarea>
+
       <button class="btn-action btn-success" onclick="saveExecutedDialysis()">Dialyse Opslaan / Afronden</button>
       <button class="btn btn-secondary" style="margin-top: 6px; width: 100%; padding: 8px;" onclick="closeModal()">Annuleren</button>
       <div class="status-msg" id="statusMsgModal"></div>
@@ -193,7 +243,6 @@
     let dialysisData = [];
     let activeModalItem = null;
 
-    // Standaard lijst verpleging in localStorage indien leeg
     if (!localStorage.getItem('tasker_nurses')) {
       localStorage.setItem('tasker_nurses', JSON.stringify(['Jan', 'Marieke', 'Pieter']));
     }
@@ -305,7 +354,6 @@
       document.getElementById('modalStartTime').value = schoneTijd;
       document.getElementById('modalStopTime').value = new Date().toTimeString().slice(0, 5);
       
-      // Laad opgeslagen drooggewicht (standaard 121)
       let savedDroog = localStorage.getItem('tasker_drooggewicht') || '121';
       document.getElementById('modalDroogGewicht').value = savedDroog;
       
@@ -315,6 +363,14 @@
       document.getElementById('modalUfAdvies').className = '';
       document.getElementById('modalUfAdvies').style = 'font-weight: bold; background:#f1f5f9;';
       
+      document.getElementById('modalFragmin1').value = '2500';
+      document.getElementById('modalFragmin2').value = '2500';
+      document.getElementById('modalFragmin3').value = '2500';
+      document.getElementById('modalEpo').value = 'Nee';
+      document.getElementById('modalIjzer').value = 'Nee';
+      document.getElementById('modalShuntflow').value = '';
+      document.getElementById('modalOpmerkingen').value = '';
+
       renderNursesList();
       document.getElementById('statusMsgModal').innerText = '';
       document.getElementById('dialysisModal').style.display = 'flex';
@@ -351,7 +407,6 @@
       let ufField = document.getElementById('modalUfAdvies');
       ufField.value = uf.toFixed(2) + ' L';
 
-      // Kleurcodering op basis van jouw regels: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
       if (uf >= 4.5) {
         ufField.style.backgroundColor = '#fee2e2';
         ufField.style.color = '#991b1b';
@@ -375,22 +430,31 @@
         return;
       }
 
-      // Verzamel aangevinkte verpleging
       let selectedNurses = [];
       document.querySelectorAll('input[name="nurseChoice"]:checked').forEach(cb => {
         selectedNurses.push(cb.value);
       });
       let verplegingStr = selectedNurses.length > 0 ? selectedNurses.join(', ') : 'Onbekend';
+      let fragmin1 = document.getElementById('modalFragmin1').value;
+      let fragmin2 = document.getElementById('modalFragmin2').value;
+      let fragmin3 = document.getElementById('modalFragmin3').value;
+      let epo = document.getElementById('modalEpo').value;
+      let ijzer = document.getElementById('modalIjzer').value;
+      let shuntflow = document.getElementById('modalShuntflow').value;
+      let opmerkingen = document.getElementById('modalOpmerkingen').value;
 
       document.getElementById('statusMsgModal').innerText = "Opslaan...";
 
-      // Sla op in de Google Sheet
+      let detailsSummary = `${activeModalItem.drinken} | Verpl: ${verplegingStr} | Pre: ${preWeight}kg | Post: ${postWeight}kg | Fragmin: ${fragmin1}/${fragmin2}/${fragmin3} | Epo: ${epo} | Ijzer: ${ijzer}` + 
+        (shuntflow ? ` | Shuntflow: ${shuntflow}` : '') + 
+        (opmerkingen ? ` | Opmerking: ${opmerkingen}` : '');
+
       let params = {
         action: 'add',
         type: 'DialyseUitgevoerd',
         datum: activeModalItem.datum,
         tijd: startTime,
-        detail1: activeModalItem.drinken + ' | Verpleging: ' + verplegingStr + ' | Pre: ' + preWeight + 'kg | Post: ' + postWeight + 'kg',
+        detail1: detailsSummary,
         detail2: 'Stoptijd: ' + stopTime
       };
 
