@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Tasker - Dialyse Planning & Uitvoering</title>
+  <title>Tasker - Dialyse Planning, Uitvoering & Rapportage</title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -136,6 +136,25 @@
         <div style="color: #94a3b8; text-align: center; font-size: 9px;">Gegevens ophalen...</div>
       </div>
     </div>
+
+    <!-- RAPPORTAGE & EXPORT KAART -->
+    <div class="card">
+      <div class="date-header">Rapportage & Export Overzicht</div>
+      
+      <span class="label-text">Periode Start:</span>
+      <input type="date" id="exportStart">
+
+      <span class="label-text">Periode Eind:</span>
+      <input type="date" id="exportEnd">
+
+      <span class="label-text">Export Formaat:</span>
+      <div class="grid" id="exportFormatGrid">
+        <button class="btn active" onclick="setExportFormat('pdf', this)">📄 PDF Overzicht</button>
+        <button class="btn" onclick="setExportFormat('csv', this)">📊 Spreadsheet (CSV)</button>
+      </div>
+
+      <button class="btn-action" onclick="generateReport()">Rapport Genereren</button>
+    </div>
   </div>
 
   <!-- POPUP VOOR UITVOERING DIALYSE -->
@@ -240,15 +259,23 @@
 
     let selectedSessionType = 'Dag';
     let selectedRepetition = 'Eenmalig';
+    let selectedExportFormat = 'pdf';
     let dialysisData = [];
+    let allLogsCache = [];
     let activeModalItem = null;
 
     if (!localStorage.getItem('tasker_nurses')) {
       localStorage.setItem('tasker_nurses', JSON.stringify(['Jan', 'Marieke', 'Pieter']));
     }
 
-    document.getElementById('dialysisDate').value = new Date().toISOString().slice(0, 10);
+    let todayStr = new Date().toISOString().slice(0, 10);
+    document.getElementById('dialysisDate').value = todayStr;
     document.getElementById('dialysisTime').value = new Date().toTimeString().slice(0, 5);
+    
+    // Standaard export periode: deze maand
+    let firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 2).toISOString().slice(0, 10);
+    document.getElementById('exportStart').value = firstDayOfMonth;
+    document.getElementById('exportEnd').value = todayStr;
 
     function setSessionType(type, btn) {
       document.querySelectorAll('#sessionTypeGrid .btn').forEach(b => b.classList.remove('active'));
@@ -272,11 +299,18 @@
       }
     }
 
+    function setExportFormat(format, btn) {
+      document.querySelectorAll('#exportFormatGrid .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedExportFormat = format;
+    }
+
     function fetchDialysisData() {
       fetch(WEB_APP_URL)
         .then(response => response.json())
         .then(data => {
           if (data.logs) {
+            allLogsCache = data.logs;
             dialysisData = data.logs.filter(item => item.type === 'DialysePlan');
           }
           renderDialysisUI();
@@ -466,6 +500,7 @@
           document.getElementById('statusMsgModal').innerText = "Opgeslagen! ✅";
           setTimeout(() => {
             closeModal();
+            fetchDialysisData();
           }, 1200);
         })
         .catch(() => {
@@ -538,6 +573,86 @@
             fetchDialysisData();
           })
           .catch(() => alert("Verwijderen mislukt"));
+      }
+    }
+
+    function generateReport() {
+      let startStr = document.getElementById('exportStart').value;
+      let endStr = document.getElementById('exportEnd').value;
+
+      if (!startStr || !endStr) {
+        alert("Selecteer zowel een startdatum als een einddatum.");
+        return;
+      }
+
+      // Filter uitgevoerde dialyses binnen de periode
+      let executedLogs = allLogsCache.filter(item => {
+        return item.type === 'DialyseUitgevoerd' && item.datum >= startStr && item.datum <= endStr;
+      });
+
+      if (executedLogs.length === 0) {
+        alert("Geen uitgevoerde dialyses gevonden in de geselecteerde periode.");
+        return;
+      }
+
+      if (selectedExportFormat === 'csv') {
+        // Genereer CSV spreadsheet
+        let csvContent = "data:text/csv;charset=utf-8,Datum;Tijd;Details;Stoptijd\n";
+        executedLogs.forEach(row => {
+          csvContent += `"${row.datum}";"${row.tijd}";"${row.drinken}";"${row.detail2}"\n`;
+        });
+        let encodedUri = encodeURI(csvContent);
+        let link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `dialyse_rapport_${startStr}_tot_${endStr}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Genereer PDF / Print overzicht
+        let printWindow = window.open('', '_blank');
+        let html = `
+          <html>
+            <head>
+              <title>Dialyse Rapport (${startStr} t/m ${endStr})</title>
+              <style>
+                body { font-family: sans-serif; padding: 20px; color: #333; }
+                h2 { color: #0284c7; border-bottom: 2px solid #0284c7; padding-bottom: 5px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+                th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+                th { background: #f1f5f9; }
+              </style>
+            </head>
+            <body>
+              <h2>Dialyse Rapportage</h2>
+              <p><b>Periode:</b> ${startStr} tot ${endStr}</p>
+              <table>
+                <tr>
+                  <th>Datum</th>
+                  <th>Starttijd</th>
+                  <th>Sessie & Details</th>
+                  <th>Stoptijd</th>
+                </tr>`;
+        
+        executedLogs.forEach(item => {
+          html += `<tr>
+            <td>${item.datum}</td>
+            <td>${item.tijd}</td>
+            <td>${item.drinken}</td>
+            <td>${item.detail2}</td>
+          </tr>`;
+        });
+
+        html += `</table>
+            </body>
+          </html>`;
+        
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
       }
     }
 
