@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Tasker - Dialyse Planning</title>
+  <title>Tasker - Dialyse Planning & Uitvoering</title>
   <style>
     :root {
       --bg: #f8fafc;
@@ -54,6 +54,8 @@
       background: var(--primary); color: white; border: none; width: 100%; padding: 10px;
       border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 6px;
     }
+    .btn-success { background: var(--success); }
+    .btn-secondary { background: #64748b; color: white; border: none; }
     input[type="date"], input[type="time"], input[type="text"], select {
       width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; text-align: center; margin-bottom: 8px; background: #fff;
     }
@@ -61,10 +63,22 @@
     .status-msg { margin-top: 4px; font-size: 9px; font-weight: 500; color: #16a34a; height: 12px; text-align: center; }
     
     .receipt { background: #f0fdf4; border: 1px dashed #bbf7d0; border-radius: 6px; padding: 6px; text-align: left; max-height: 180px; overflow-y: auto; margin-bottom: 6px; }
-    .receipt-item { display: flex; justify-content: space-between; align-items: center; font-size: 10px; padding: 4px 0; border-bottom: 1px solid #dcfce7; }
+    .receipt-item { display: flex; justify-content: space-between; align-items: center; font-size: 10px; padding: 6px 4px; border-bottom: 1px solid #dcfce7; cursor: pointer; }
+    .receipt-item:hover { background: #dcfce7; }
     .session-badge { font-size: 8px; background: #e0f2fe; padding: 2px 4px; border-radius: 3px; color: #0369a1; font-weight: bold; }
-    .item-del-btn { background: var(--danger); color: white; border: none; border-radius: 3px; width: 16px; height: 16px; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .item-del-btn { background: var(--danger); color: white; border: none; border-radius: 3px; width: 18px; height: 18px; font-size: 9px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .back-link { display: block; margin-bottom: 8px; font-size: 10px; color: var(--primary); text-decoration: none; font-weight: bold; text-align: left; }
+
+    /* POPUP / MODAL STYLING */
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 12px;
+    }
+    .modal-content {
+      background: white; border-radius: 8px; padding: 12px; width: 100%; max-width: 350px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left;
+    }
+    .modal-title { font-size: 12px; font-weight: bold; color: var(--primary); margin-bottom: 8px; }
   </style>
 </head>
 <body>
@@ -109,10 +123,39 @@
 
     <!-- OVERZICHT GEPLANDE DIALYSES -->
     <div class="card">
-      <h3>Geplande Dialyses</h3>
+      <h3>Geplande Dialyses (Klik om uit te voeren)</h3>
       <div class="receipt" id="receiptListDialyse">
         <div style="color: #94a3b8; text-align: center; font-size: 9px;">Gegevens ophalen...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- POPUP VOOR UITVOERING DIALYSE -->
+  <div class="modal" id="dialysisModal">
+    <div class="modal-content">
+      <div class="modal-title" id="modalTitle">Dialyse Uitvoeren</div>
+      
+      <span class="label-text">Datum:</span>
+      <input type="text" id="modalDate" readonly style="background:#f1f5f9;">
+
+      <span class="label-text">Type:</span>
+      <input type="text" id="modalType" readonly style="background:#f1f5f9;">
+
+      <span class="label-text">Starttijd (werkelijk):</span>
+      <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+        <input type="time" id="modalStartTime" style="margin-bottom:0;">
+        <button class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="setNow('modalStartTime')">Nu</button>
+      </div>
+
+      <span class="label-text">Stoptijd (werkelijk):</span>
+      <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+        <input type="time" id="modalStopTime" style="margin-bottom:0;">
+        <button class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="setNow('modalStopTime')">Nu</button>
+      </div>
+
+      <button class="btn-action btn-success" onclick="saveExecutedDialysis()">Dialyse Opslaan / Afronden</button>
+      <button class="btn btn-secondary" style="margin-top: 6px; width: 100%; padding: 8px;" onclick="closeModal()">Annuleren</button>
+      <div class="status-msg" id="statusMsgModal"></div>
     </div>
   </div>
 
@@ -122,6 +165,7 @@
     let selectedSessionType = 'Dag';
     let selectedRepetition = 'Eenmalig';
     let dialysisData = [];
+    let activeModalItem = null;
 
     document.getElementById('dialysisDate').value = new Date().toISOString().slice(0, 10);
     document.getElementById('dialysisTime').value = new Date().toTimeString().slice(0, 5);
@@ -170,7 +214,6 @@
       if (dialysisData.length > 0) {
         receipt.innerHTML = "";
         dialysisData.forEach((item, idx) => {
-          // Schoon de tijd op voor de weergave (neem alleen HH:mm als er een lange reeks staat)
           let schoneTijd = item.tijd;
           if (schoneTijd.includes('T')) {
             schoneTijd = schoneTijd.split('T')[1].slice(0, 5);
@@ -180,13 +223,74 @@
 
           receipt.innerHTML += `
             <div class="receipt-item">
-              <span><b>${item.datum}</b> (${schoneTijd}) <span class="session-badge">${item.drinken}</span></span>
-              <button class="item-del-btn" onclick="deleteDialysis(${idx})">✕</button>
+              <span onclick="openModal(${idx})" style="flex-grow:1;"><b>${item.datum}</b> (${schoneTijd}) <span class="session-badge">${item.drinken}</span></span>
+              <button class="item-del-btn" onclick="event.stopPropagation(); deleteDialysis(${idx})">✕</button>
             </div>`;
         });
       } else {
         receipt.innerHTML = `<div style="color: #94a3b8; text-align: center; font-size: 9px;">Nog geen dialyses ingepland</div>`;
       }
+    }
+
+    function openModal(index) {
+      activeModalItem = dialysisData[index];
+      let schoneTijd = activeModalItem.tijd;
+      if (schoneTijd.includes('T')) schoneTijd = schoneTijd.split('T')[1].slice(0, 5);
+      else if (schoneTijd.length > 5) schoneTijd = schoneTijd.slice(0, 5);
+
+      document.getElementById('modalDate').value = activeModalItem.datum;
+      document.getElementById('modalType').value = activeModalItem.drinken + 'dialyse';
+      document.getElementById('modalStartTime').value = schoneTijd;
+      document.getElementById('modalStopTime').value = new Date().toTimeString().slice(0, 5);
+      document.getElementById('statusMsgModal').innerText = '';
+      
+      document.getElementById('dialysisModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('dialysisModal').style.display = 'none';
+    }
+
+    function setNow(elementId) {
+      document.getElementById(elementId).value = new Date().toTimeString().slice(0, 5);
+    }
+
+    function saveExecutedDialysis() {
+      let startTime = document.getElementById('modalStartTime').value;
+      let stopTime = document.getElementById('modalStopTime').value;
+
+      if (!startTime || !stopTime) {
+        alert("Vul zowel de starttijd als de stoptijd in.");
+        return;
+      }
+
+      document.getElementById('statusMsgModal').innerText = "Opslaan...";
+
+      // Sla op als 'DialyseUitgevoerd' (of pas aan naar wens)
+      let params = {
+        action: 'add',
+        type: 'DialyseUitgevoerd',
+        datum: activeModalItem.datum,
+        tijd: startTime,
+        detail1: activeModalItem.drinken,
+        detail2: stopTime
+      };
+
+      let url = WEB_APP_URL + '?' + new URLSearchParams(params).toString();
+
+      fetch(url)
+        .then(response => response.json())
+        .then(() => {
+          document.getElementById('statusMsgModal').innerText = "Opgeslagen! ✅";
+          setTimeout(() => {
+            closeModal();
+            // Eventueel kun je het geplande item nu ook automatisch verwijderen als hij is uitgevoerd:
+            // deleteDialysisSilent(dialysisData.indexOf(activeModalItem));
+          }, 1200);
+        })
+        .catch(() => {
+          document.getElementById('statusMsgModal').innerText = "Opslaan mislukt";
+        });
     }
 
     function planDialyse() {
@@ -203,19 +307,12 @@
       let datesToPlan = [];
       let startDate = new Date(startDateStr);
       let count = selectedRepetition === 'Eenmalig' ? 1 : parseInt(document.getElementById('repeatCount').value);
-      let stepDays = 1;
-
-      if (selectedRepetition === 'Om de dag') {
-        stepDays = 2;
-      } else if (selectedRepetition === 'Dagelijks') {
-        stepDays = 1;
-      }
+      let stepDays = selectedRepetition === 'Om de dag' ? 2 : 1;
 
       for (let i = 0; i < count; i++) {
         let d = new Date(startDate);
         d.setDate(startDate.getDate() + (i * stepDays));
-        let dStr = d.toISOString().slice(0, 10);
-        datesToPlan.push(dStr);
+        datesToPlan.push(d.toISOString().slice(0, 10));
       }
 
       let promises = datesToPlan.map(datum => {
@@ -223,7 +320,7 @@
           action: 'add',
           type: 'DialysePlan',
           datum: datum,
-          tijd: "'" + tijd, // Zet er een apostrof voor zodat Google Sheets het als tekst behandelt i.p.v. datum-object
+          tijd: "'" + tijd,
           detail1: selectedSessionType,
           detail2: ''
         };
