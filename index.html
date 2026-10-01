@@ -403,6 +403,22 @@
             bepaalStatus();
         }
 
+        // Hulpfunctie om ISO / technische datums netjes te formatteren (bijv. 30-09-2026 22:30)
+        function formatteerDatumWeergave(isoStr) {
+            if (!isoStr) return '-';
+            let s = String(isoStr).trim();
+            // Als het een ISO string is met T
+            if (s.includes('T')) {
+                let parts = s.split('T');
+                let dParts = parts[0].split('-');
+                let tPart = parts[1].split('.')[0].substring(0, 5); // HH:mm
+                if (dParts.length === 3) {
+                    return `${dParts[2]}-${dParts[1]}-${dParts[0]} ${tPart}`;
+                }
+            }
+            return s;
+        }
+
         function laadData() {
             fetch(`${WEB_APP_URL}?actie=getDialyseOverzicht`)
                 .then(res => res.json())
@@ -423,11 +439,12 @@
             }
             items.forEach(i => {
                 const badgeColor = i.status === 'Bezig' ? 'bg-amber-500 text-white' : 'bg-sky-600 text-white';
+                const startWeergave = formatteerDatumWeergave(i.start || i.afspraak);
                 container.innerHTML += `
                     <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeColor}">${i.status}</span>
-                            <div class="font-bold text-slate-700 mt-1">Start: ${i.start || i.afspraak || 'Nog niet ingepland'}</div>
+                            <div class="font-bold text-slate-700 mt-1">Start: ${startWeergave}</div>
                             <div class="text-xs text-slate-500">Type: ${i.type} | Gekozen UF: ${i.gekozenUf || '-'} kg</div>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
@@ -448,11 +465,12 @@
                 return;
             }
             items.forEach(i => {
+                const stopWeergave = formatteerDatumWeergave(i.stop || i.start);
                 container.innerHTML += `
                     <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white">Gereed</span>
-                            <div class="font-bold text-slate-700 mt-1">Afgerond op: ${i.stop || i.start}</div>
+                            <div class="font-bold text-slate-700 mt-1">Afgerond op: ${stopWeergave}</div>
                             <div class="text-xs text-slate-500">Type: ${i.type} | Werkelijke UF: ${i.werkelijkUf || '-'}</div>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
@@ -464,7 +482,6 @@
             });
         }
 
-        // Hulpfunctie om datums om te zetten naar YYYY-MM-DDTHH:mm voor datetime-local inputs
         function formaatVoorInput(str) {
             if (!str) return '';
             let s = String(str).trim();
@@ -493,7 +510,6 @@
             document.getElementById('gekozenUf').value = item.gekozenUf || '';
             document.getElementById('bijzonderheden').value = item.bijzonderheden || '';
 
-            // Medicatie & Opties herstellen
             if (item.fragmin2500) { 
                 document.getElementById('checkFragmin2500').checked = true; 
                 document.getElementById('valFragmin2500').value = item.fragmin2500; 
@@ -537,8 +553,8 @@
 
             const html = `
                 <div><strong>Status:</strong> ${i.status}</div>
-                <div><strong>Afspraak:</strong> ${i.afspraak || '-'}</div>
-                <div><strong>Start / Stop:</strong> ${i.start || '-'} / ${i.stop || '-'}</div>
+                <div><strong>Afspraak:</strong> ${formatteerDatumWeergave(i.afspraak) || '-'}</div>
+                <div><strong>Start / Stop:</strong> ${formatteerDatumWeergave(i.start) || '-'} / ${formatteerDatumWeergave(i.stop) || '-'}</div>
                 <div><strong>Type:</strong> ${i.type} (${i.herhaling})</div>
                 <div><strong>Pregewicht / Postgewicht:</strong> ${i.pregewicht || '-'} kg / ${i.postgewicht || '-'} kg</div>
                 <div><strong>UF Advies / Gekozen / Werkelijk:</strong> ${i.ufAdvies} / ${i.gekozenUf || '-'} kg / ${i.werkelijkUf || '-'}</div>
@@ -569,10 +585,6 @@
         }
 
         function slaDialyseOp(isConcept) {
-            const btn = document.getElementById('btnOpslaan');
-            btn.disabled = true;
-            btn.innerText = "Bezig met opslaan...";
-
             const id = document.getElementById('bewerkId').value || ('DIALYSE-' + Date.now());
 
             const payload = {
@@ -600,21 +612,17 @@
 
             fetch(WEB_APP_URL, {
                 method: 'POST',
-                body: JSON.stringify({ actie: 'slaDialyseOp', ...payload })
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(res => {
                 toonStatus(isConcept ? "Tijdelijk opgeslagen als concept." : res.message);
-                btn.disabled = false;
-                btn.innerText = "Wijzigingen Opslaan";
                 resetFormulier();
                 laadData();
                 switchTab('actief');
             })
             .catch(err => {
                 toonStatus("Fout bij opslaan: " + err, true);
-                btn.disabled = false;
-                btn.innerText = "Wijzigingen Opslaan";
             });
         }
 
