@@ -403,15 +403,13 @@
             bepaalStatus();
         }
 
-        // Hulpfunctie om ISO / technische datums netjes te formatteren (bijv. 30-09-2026 22:30)
         function formatteerDatumWeergave(isoStr) {
             if (!isoStr) return '-';
             let s = String(isoStr).trim();
-            // Als het een ISO string is met T
             if (s.includes('T')) {
                 let parts = s.split('T');
                 let dParts = parts[0].split('-');
-                let tPart = parts[1].split('.')[0].substring(0, 5); // HH:mm
+                let tPart = parts[1].split('.')[0].substring(0, 5);
                 if (dParts.length === 3) {
                     return `${dParts[2]}-${dParts[1]}-${dParts[0]} ${tPart}`;
                 }
@@ -492,11 +490,14 @@
         }
 
         function bewerkItem(id) {
-            const item = alleItems.find(i => i.id === id);
-            if (!item) return;
+            const item = alleItems.find(i => String(i.id).trim() === String(id).trim());
+            if (!item) {
+                toonStatus("Kon item niet vinden om te bewerken", true);
+                return;
+            }
 
-            document.getElementById('bewerkId').value = item.id;
-            document.getElementById('formTitel').innerText = "✏️ Behandeling Bewerken";
+            document.getElementById('bewerkId').value = String(item.id);
+            document.getElementById('formTitel').innerText = "✏️ Behandeling Bewerken (ID: " + item.id + ")";
             
             document.getElementById('afspraak').value = formaatVoorInput(item.afspraak);
             document.getElementById('start').value = formaatVoorInput(item.start);
@@ -548,7 +549,7 @@
         }
 
         function inzienItem(id) {
-            const i = alleItems.find(x => x.id === id);
+            const i = alleItems.find(x => String(x.id).trim() === String(id).trim());
             if (!i) return;
 
             const html = `
@@ -585,7 +586,8 @@
         }
 
         function slaDialyseOp(isConcept) {
-            const id = document.getElementById('bewerkId').value || ('DIALYSE-' + Date.now());
+            const bestaandId = document.getElementById('bewerkId').value.trim();
+            const id = bestaandId !== "" ? bestaandId : ('DIALYSE-' + Date.now());
 
             const payload = {
                 actie: 'slaDialyseOp',
