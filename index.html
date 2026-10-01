@@ -151,14 +151,14 @@
             <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
                 <h2 class="text-lg font-bold text-slate-700 border-b pb-2">👩‍⚕️ Verpleging & Notities</h2>
                 
-                <!-- Direct zichtbare checklist (Altijd betrouwbaar en werkt direct) -->
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-semibold uppercase text-slate-500">Verpleging (Meerdere selecties mogelijk)</label>
-                        <button onclick="voegNieuweVerpleging()" class="text-xs bg-sky-100 text-sky-700 font-bold px-2.5 py-1 rounded-lg hover:bg-sky-200 transition">+ Nieuw Toevoegen</button>
+                        <button onclick="voegNieuweVerpleging()" class="text-xs bg-sky-100 text-sky-700 font-bold px-3 py-1.5 rounded-lg hover:bg-sky-200 transition">+ Nieuw Toevoegen</button>
                     </div>
-                    <div id="verplegingContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-slate-200 p-3 rounded-xl">
-                        <!-- Wordt dynamisch gevuld -->
+                    <!-- Direct zichtbare checklist met vakjes -->
+                    <div id="verplegingContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-slate-200 p-3 rounded-xl min-h-[50px]">
+                        <!-- Wordt direct geladen -->
                     </div>
                 </div>
 
@@ -174,13 +174,13 @@
             </div>
         </div>
 
-        <!-- TAB 2: ACTIEF OVERZICHT (Gepland & Bezig) -->
+        <!-- TAB 2: ACTIEF OVERZICHT -->
         <div id="section-actief" class="tab-content hidden space-y-4">
             <h2 class="text-lg font-bold text-slate-700">⚡ Actieve Behandelingen (Gepland & Bezig)</h2>
             <div id="actiefContainer" class="space-y-3"></div>
         </div>
 
-        <!-- TAB 3: HISTORIE & PDF RAPPORTAGE -->
+        <!-- TAB 3: HISTORIE & PDF -->
         <div id="section-historie" class="tab-content hidden space-y-4">
             <h2 class="text-lg font-bold text-slate-700">📊 Historie & Medische Rapportage</h2>
             
@@ -206,7 +206,7 @@
 
     </main>
 
-    <!-- INZIEN POPUP (Alleen lezen) -->
+    <!-- INZIEN POPUP -->
     <div id="inzienModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50 p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-xl">
             <div class="flex justify-between items-center border-b pb-2">
@@ -231,6 +231,8 @@
             document.getElementById('exportStart').value = vandaag;
             document.getElementById('exportEind').value = vandaag;
 
+            // Direct tonen met fallback, daarna ophalen
+            bouwVerplegingLijst();
             laadConfig();
             laadData();
         };
@@ -261,13 +263,10 @@
                 .then(data => {
                     if (data && data.verpleging && Array.isArray(data.verpleging) && data.verpleging.length > 0) {
                         appConfig.verpleging = data.verpleging;
+                        bouwVerplegingLijst();
                     }
-                    bouwVerplegingLijst();
                 })
-                .catch(err => {
-                    console.warn("Fout bij config laden, gebruik defaults:", err);
-                    bouwVerplegingLijst();
-                });
+                .catch(err => console.warn("Kon config niet laden, gebruik standaardlijst", err));
         }
 
         function bouwVerplegingLijst() {
@@ -280,9 +279,9 @@
             lijst.forEach(naam => {
                 const isChecked = gekozenVerpleging.includes(naam) ? 'checked' : '';
                 container.innerHTML += `
-                    <label class="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg hover:bg-sky-50 cursor-pointer select-none">
+                    <label class="flex items-center gap-2.5 p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-sky-50 cursor-pointer select-none shadow-sm">
                         <input type="checkbox" value="${naam}" ${isChecked} onchange="updateVerplegingSelectie(this)" class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500">
-                        <span class="text-sm font-medium text-slate-700">${naam}</span>
+                        <span class="text-sm font-bold text-slate-700">${naam}</span>
                     </label>
                 `;
             });
@@ -368,7 +367,8 @@
                     alleItems = items;
                     renderActief(items.filter(i => i.status === 'Gepland' || i.status === 'Bezig'));
                     renderHistorie(items.filter(i => i.status === 'Gereed'));
-                });
+                })
+                .catch(err => console.warn("Kon data niet laden", err));
         }
 
         function renderActief(items) {
