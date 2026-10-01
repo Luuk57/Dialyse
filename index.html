@@ -38,7 +38,7 @@
 
             <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
                 <div class="flex justify-between items-center border-b pb-2">
-                    <h2 class="text-lg font-bold text-slate-700">📅 Planning & Tijden</h2>
+                    <h2 id="formTitel" class="text-lg font-bold text-slate-700">📅 Nieuwe Dialyse Invoeren</h2>
                     <button onclick="resetFormulier()" class="text-xs bg-slate-200 text-slate-700 font-bold px-3 py-1 rounded-lg">Formulier Leegmaken</button>
                 </div>
                 
@@ -171,7 +171,7 @@
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <button onclick="slaDialyseOp(true)" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Tijdelijk Opslaan (Concept)</button>
-                <button id="btnOpslaan" onclick="slaDialyseOp(false)" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Definitief Opslaan</button>
+                <button id="btnOpslaan" onclick="slaDialyseOp(false)" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Wijzigingen Opslaan</button>
             </div>
         </div>
 
@@ -394,8 +394,10 @@
 
         function resetFormulier() {
             document.getElementById('bewerkId').value = '';
+            document.getElementById('formTitel').innerText = "📅 Nieuwe Dialyse Invoeren";
             document.querySelectorAll('input:not([type=date]), textarea').forEach(el => el.value = '');
             document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+            document.getElementById('valShuntflow').classList.add('hidden');
             gekozenVerpleging = [];
             bouwVerplegingLijst();
             bepaalStatus();
@@ -462,14 +464,27 @@
             });
         }
 
+        // Hulpfunctie om datums om te zetten naar YYYY-MM-DDTHH:mm voor datetime-local inputs
+        function formaatVoorInput(str) {
+            if (!str) return '';
+            let s = String(str).trim();
+            if (' ' in s && !s.includes('T')) {
+                s = s.replace(' ', 'T');
+            }
+            return s.substring(0, 16);
+        }
+
         function bewerkItem(id) {
             const item = alleItems.find(i => i.id === id);
             if (!item) return;
 
             document.getElementById('bewerkId').value = item.id;
-            document.getElementById('afspraak').value = item.afspraak || '';
-            document.getElementById('start').value = item.start || '';
-            document.getElementById('stop').value = item.stop || '';
+            document.getElementById('formTitel').innerText = "✏️ Behandeling Bewerken";
+            
+            document.getElementById('afspraak').value = formaatVoorInput(item.afspraak);
+            document.getElementById('start').value = formaatVoorInput(item.start);
+            document.getElementById('stop').value = formaatVoorInput(item.stop);
+            
             document.getElementById('typeDialyse').value = item.type || 'Nacht (0,3)';
             document.getElementById('herhaling').value = item.herhaling || 'geen';
             document.getElementById('eindHerhaling').value = item.eindHerhaling || '';
@@ -478,11 +493,35 @@
             document.getElementById('gekozenUf').value = item.gekozenUf || '';
             document.getElementById('bijzonderheden').value = item.bijzonderheden || '';
 
-            if (item.fragmin2500) { document.getElementById('checkFragmin2500').checked = true; document.getElementById('valFragmin2500').value = item.fragmin2500; }
-            if (item.fragmin5000) { document.getElementById('checkFragmin5000').checked = true; document.getElementById('valFragmin5000').value = item.fragmin5000; }
-            if (item.epo) document.getElementById('checkEpo').checked = true;
-            if (item.ijzer) document.getElementById('checkIjzer').checked = true;
-            if (item.shuntflow) { document.getElementById('checkShuntflow').checked = true; document.getElementById('valShuntflow').value = item.shuntflow; document.getElementById('valShuntflow').classList.remove('hidden'); }
+            // Medicatie & Opties herstellen
+            if (item.fragmin2500) { 
+                document.getElementById('checkFragmin2500').checked = true; 
+                document.getElementById('valFragmin2500').value = item.fragmin2500; 
+            } else {
+                document.getElementById('checkFragmin2500').checked = false; 
+                document.getElementById('valFragmin2500').value = '';
+            }
+
+            if (item.fragmin5000) { 
+                document.getElementById('checkFragmin5000').checked = true; 
+                document.getElementById('valFragmin5000').value = item.fragmin5000; 
+            } else {
+                document.getElementById('checkFragmin5000').checked = false; 
+                document.getElementById('valFragmin5000').value = '';
+            }
+
+            document.getElementById('checkEpo').checked = Boolean(item.epo);
+            document.getElementById('checkIjzer').checked = Boolean(item.ijzer);
+
+            if (item.shuntflow) { 
+                document.getElementById('checkShuntflow').checked = true; 
+                document.getElementById('valShuntflow').value = item.shuntflow; 
+                document.getElementById('valShuntflow').classList.remove('hidden'); 
+            } else {
+                document.getElementById('checkShuntflow').checked = false; 
+                document.getElementById('valShuntflow').value = ''; 
+                document.getElementById('valShuntflow').classList.add('hidden');
+            }
 
             gekozenVerpleging = item.verpleging || [];
             bouwVerplegingLijst();
@@ -567,7 +606,7 @@
             .then(res => {
                 toonStatus(isConcept ? "Tijdelijk opgeslagen als concept." : res.message);
                 btn.disabled = false;
-                btn.innerText = "Definitief Opslaan";
+                btn.innerText = "Wijzigingen Opslaan";
                 resetFormulier();
                 laadData();
                 switchTab('actief');
@@ -575,7 +614,7 @@
             .catch(err => {
                 toonStatus("Fout bij opslaan: " + err, true);
                 btn.disabled = false;
-                btn.innerText = "Definitief Opslaan";
+                btn.innerText = "Wijzigingen Opslaan";
             });
         }
 
