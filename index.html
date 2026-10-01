@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Dialyse Module</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <meta name="theme-color" content="#0284c7">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-sky-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                🩺 Tasker - Dialyse Module
+            </h1>
+            <span id="statusBadgeHeader" class="text-xs bg-sky-800 px-3 py-1 rounded-full text-white font-bold">Gepland</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl w-full mx-auto p-4 flex-grow space-y-6 pb-20">
+
+        <div id="statusMessage" class="hidden p-4 rounded-xl text-sm font-medium transition-all shadow-sm"></div>
+
+        <!-- Kaart 1: Planning & Tijden -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+            <h2 class="text-lg font-bold text-slate-700 border-b pb-2">📅 Planning & Tijden</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Afspraak Datum/Tijd</label>
+                    <input type="datetime-local" id="afspraak" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Start Datum/Tijd</label>
+                    <input type="datetime-local" id="start" oninput="bepaalStatus()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Stop Datum/Tijd</label>
+                    <input type="datetime-local" id="stop" oninput="bepaalStatus()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Type Dialyse</label>
+                    <select id="typeDialyse" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="Nacht (0,3)">Nacht (0,3)</option>
+                        <option value="Dag (0,6)">Dag (0,6)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Herhaling</label>
+                    <select id="herhaling" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                        <option value="geen">Geen</option>
+                        <option value="elke dag">Elke dag</option>
+                        <option value="om de dag">Om de dag</option>
+                        <option value="ma wo vrij">Ma - Wo - Vrij</option>
+                        <option value="di do za">Di - Do - Za</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Eind Datum Herhaling</label>
+                    <input type="date" id="eindHerhaling" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+            </div>
+        </section>
+
+        <!-- Kaart 2: Gewichten & UF Berekening -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+            <h2 class="text-lg font-bold text-slate-700 border-b pb-2">⚖️ Gewichten & UF</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Pregewicht (kg)</label>
+                    <input type="number" step="0.1" id="pregewicht" placeholder="bijv. 112.5" oninput="berekenUF()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Postgewicht (kg)</label>
+                    <input type="number" step="0.1" id="postgewicht" placeholder="bijv. 109.0" oninput="berekenUF()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Werkelijke UF (Pre - Post)</label>
+                    <input type="text" id="werkelijkUf" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Berekend UF Advies (Pre - 109 + 0.3)</span>
+                        <div id="ufAdviesResult" class="text-2xl font-extrabold text-slate-700">0.0 kg</div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Gekozen UF (kg)</label>
+                    <input type="number" step="0.1" id="gekozenUf" placeholder="bijv. 3.5" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+            </div>
+        </section>
+
+        <!-- Kaart 3: Medicatie & Toevoegingen -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+            <h2 class="text-lg font-bold text-slate-700 border-b pb-2">💊 Medicatie & Opties</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Fragmin 2500 -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                    <input type="checkbox" id="checkFragmin2500" class="w-5 h-5 text-sky-600 rounded">
+                    <label class="text-sm font-semibold flex-grow">Fragmin 2500</label>
+                    <input type="number" id="valFragmin2500" placeholder="Hoeveelheid" class="w-28 bg-white border border-slate-200 rounded-lg p-2 text-sm">
+                </div>
+                <!-- Fragmin 5000 -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                    <input type="checkbox" id="checkFragmin5000" class="w-5 h-5 text-sky-600 rounded">
+                    <label class="text-sm font-semibold flex-grow">Fragmin 5000</label>
+                    <input type="number" id="valFragmin5000" placeholder="Hoeveelheid" class="w-28 bg-white border border-slate-200 rounded-lg p-2 text-sm">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                    <input type="checkbox" id="checkEpo" class="w-5 h-5 text-sky-600 rounded">
+                    <label class="text-sm font-semibold">Epo</label>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                    <input type="checkbox" id="checkIjzer" class="w-5 h-5 text-sky-600 rounded">
+                    <label class="text-sm font-semibold">Ijzer</label>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col gap-2">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="checkShuntflow" onchange="toggleShuntflow()" class="w-5 h-5 text-sky-600 rounded">
+                        <label class="text-sm font-semibold">Shuntflow</label>
+                    </div>
+                    <input type="number" id="valShuntflow" placeholder="Waarde" class="hidden w-full bg-white border border-slate-200 rounded-lg p-2 text-sm">
+                </div>
+            </div>
+        </section>
+
+        <!-- Kaart 4: Verpleging & Bijzonderheden -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+            <h2 class="text-lg font-bold text-slate-700 border-b pb-2">👩‍⚕️ Verpleging & Notities</h2>
+            
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-semibold uppercase text-slate-500">Verpleging (Meerdere selecties)</label>
+                    <button onclick="voegNieuweVerpleging()" class="text-xs bg-sky-100 text-sky-700 font-bold px-2.5 py-1 rounded-lg hover:bg-sky-200 transition">+ Verpleging Toevoegen</button>
+                </div>
+                <div id="verplegingKnoppen" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Bijzonderheden</label>
+                <textarea id="bijzonderheden" rows="3" placeholder="Eventuele opmerkingen..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500"></textarea>
+            </div>
+        </section>
+
+        <!-- Actie Knoppen -->
+        <div class="flex flex-col sm:flex-row gap-3">
+            <button onclick="slaDialyseOp(true)" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Tijdelijk Opslaan (Concept)</button>
+            <button id="btnOpslaan" onclick="slaDialyseOp(false)" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Definitief Opslaan</button>
+        </div>
+
+    </main>
+
+    <!-- JavaScript Logica -->
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxrFTHSIyQSWT1qBEcl6Pv_CM5pr_0Za2qjvsDCZvfWc5p7J51DAuqrSJgV0db5BI-tRQ/exec";
+
+        let appConfig = { verpleging: [] };
+        let gekozenVerpleging = [];
+        let huidigId = 'DIALYSE-' + Date.now();
+
+        window.onload = function() {
+            laadConfig();
+            bepaalStatus();
+        };
+
+        function toonStatus(bericht, isFout = false) {
+            const el = document.getElementById('statusMessage');
+            el.innerText = bericht;
+            el.className = `p-4 rounded-xl text-sm font-medium transition-all shadow-sm ${isFout ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 4000);
+        }
+
+        function laadConfig() {
+            fetch(`${WEB_APP_URL}?actie=getConfig`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.verpleging) {
+                        appConfig.verpleging = data.verpleging;
+                        bouwVerplegingKnoppen();
+                    }
+                })
+                .catch(err => console.warn("Fout bij config laden:", err));
+        }
+
+        function bouwVerplegingKnoppen() {
+            const container = document.getElementById('verplegingKnoppen');
+            container.innerHTML = '';
+            appConfig.verpleging.forEach(naam => {
+                const isGeselecteerd = gekozenVerpleging.includes(naam);
+                const cls = isGeselecteerd ? "bg-sky-600 text-white border-sky-500 font-bold" : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50";
+                container.innerHTML += `<button type="button" onclick="toggleVerpleging('${naam}', this)" class="p-2.5 rounded-xl border ${cls} text-sm transition text-center">${naam}</button>`;
+            });
+        }
+
+        function toggleVerpleging(naam, btn) {
+            const idx = gekozenVerpleging.indexOf(naam);
+            if (idx > -1) {
+                gekozenVerpleging.splice(idx, 1);
+                btn.className = "p-2.5 rounded-xl border bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50 text-sm transition text-center";
+            } else {
+                gekozenVerpleging.push(naam);
+                btn.className = "p-2.5 rounded-xl border bg-sky-600 text-white border-sky-500 font-bold text-sm transition text-center";
+            }
+        }
+
+        function voegNieuweVerpleging() {
+            const naam = prompt("Naam verpleegkundige:");
+            if (!naam || !naam.trim()) return;
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ actie: 'voegVerplegingToe', waarde: naam.trim() })
+            })
+            .then(res => res.json())
+            .then(res => {
+                toonStatus(res.message);
+                laadConfig();
+            });
+        }
+
+        function toggleShuntflow() {
+            const chk = document.getElementById('checkShuntflow').checked;
+            const inp = document.getElementById('valShuntflow');
+            if (chk) inp.classList.remove('hidden');
+            else { inp.classList.add('hidden'); inp.value = ''; }
+        }
+
+        function berekenUF() {
+            const pre = parseFloat(document.getElementById('pregewicht').value) || 0;
+            const post = parseFloat(document.getElementById('postgewicht').value) || 0;
+
+            if (pre > 0 && post > 0) {
+                const werkelijk = (pre - post).toFixed(2);
+                document.getElementById('werkelijkUf').value = werkelijk + " kg";
+            } else {
+                document.getElementById('werkelijkUf').value = "";
+            }
+
+            if (pre > 0) {
+                const advies = (pre - 109 + 0.3).toFixed(2);
+                document.getElementById('ufAdviesResult').innerText = advies + " kg";
+            } else {
+                document.getElementById('ufAdviesResult').innerText = "0.0 kg";
+            }
+        }
+
+        function bepaalStatus() {
+            const start = document.getElementById('start').value;
+            const stop = document.getElementById('stop').value;
+            const badge = document.getElementById('statusBadgeHeader');
+
+            if (stop) {
+                badge.innerText = "Gereed";
+                badge.className = "text-xs bg-emerald-600 px-3 py-1 rounded-full text-white font-bold shadow-sm";
+            } else if (start) {
+                badge.innerText = "Bezig";
+                badge.className = "text-xs bg-amber-500 px-3 py-1 rounded-full text-white font-bold shadow-sm";
+            } else {
+                badge.innerText = "Gepland";
+                badge.className = "text-xs bg-sky-800 px-3 py-1 rounded-full text-white font-bold shadow-sm";
+            }
+        }
+
+        function slaDialyseOp(isConcept) {
+            const btn = document.getElementById('btnOpslaan');
+            btn.disabled = true;
+            btn.innerText = "Bezig met opslaan...";
+
+            const payload = {
+                actie: 'slaDialyseOp',
+                id: huidigId,
+                afspraak: document.getElementById('afspraak').value,
+                start: document.getElementById('start').value,
+                stop: document.getElementById('stop').value,
+                type: document.getElementById('typeDialyse').value,
+                herhaling: document.getElementById('herhaling').value,
+                eindHerhaling: document.getElementById('eindHerhaling').value,
+                pregewicht: document.getElementById('pregewicht').value,
+                postgewicht: document.getElementById('postgewicht').value,
+                ufAdvies: document.getElementById('ufAdviesResult').innerText,
+                gekozenUf: document.getElementById('gekozenUf').value,
+                werkelijkUf: document.getElementById('werkelijkUf').value,
+                fragmin2500: document.getElementById('checkFragmin2500').checked ? (document.getElementById('valFragmin2500').value || 'Ja') : '',
+                fragmin5000: document.getElementById('checkFragmin5000').checked ? (document.getElementById('valFragmin5000').value || 'Ja') : '',
+                epo: document.getElementById('checkEpo').checked ? 'Ja' : '',
+                ijzer: document.getElementById('checkIjzer').checked ? 'Ja' : '',
+                shuntflow: document.getElementById('checkShuntflow').checked ? (document.getElementById('valShuntflow').value || 'Ja') : '',
+                verpleging: gekozenVerpleging,
+                bijzonderheden: document.getElementById('bijzonderheden').value
+            };
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
+                toonStatus(isConcept ? "Tijdelijk opgeslagen als concept." : res.message);
+                btn.disabled = false;
+                btn.innerText = "Definitief Opslaan";
+            })
+            .catch(err => {
+                toonStatus("Fout bij opslaan: " + err, true);
+                btn.disabled = false;
+                btn.innerText = "Definitief Opslaan";
+            });
+        }
+    </script>
+</body>
+</html>
