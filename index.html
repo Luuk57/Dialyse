@@ -25,10 +25,11 @@
         <div id="statusMessage" class="hidden p-4 rounded-xl text-sm font-medium transition-all shadow-sm"></div>
 
         <!-- Tabs Navigatie -->
-        <div class="grid grid-cols-3 gap-1 bg-slate-200 p-1.5 rounded-2xl text-xs font-bold text-center">
+        <div class="grid grid-cols-4 gap-1 bg-slate-200 p-1.5 rounded-2xl text-xs font-bold text-center">
             <button onclick="switchTab('invoer')" id="tab-invoer" class="py-2.5 rounded-xl bg-white text-sky-700 shadow-sm transition">➕ Invoer</button>
-            <button onclick="switchTab('actief')" id="tab-actief" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">⚡ Actief (Gepland/Bezig)</button>
-            <button onclick="switchTab('historie')" id="tab-historie" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">📊 Historie & PDF</button>
+            <button onclick="switchTab('actief')" id="tab-actief" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">⚡ Actief</button>
+            <button onclick="switchTab('historie')" id="tab-historie" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">📊 Historie</button>
+            <button onclick="switchTab('config')" id="tab-config" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">⚙️ Config</button>
         </div>
 
         <!-- TAB 1: INVOER & BEWERKEN -->
@@ -82,7 +83,10 @@
             </section>
 
             <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
-                <h2 class="text-lg font-bold text-slate-700 border-b pb-2">⚖️ Gewichten & UF</h2>
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h2 class="text-lg font-bold text-slate-700">⚖️ Gewichten & UF</h2>
+                    <span class="text-xs bg-sky-50 text-sky-700 font-semibold px-2.5 py-1 rounded-lg">Streefgewicht: <span id="labelHuidigStreefgewicht">109</span> kg</span>
+                </div>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -102,7 +106,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
                         <div>
-                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Berekend UF Advies (Pre - 109 + 0.3)</span>
+                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Berekend UF Advies (Pre - Streefgewicht + 0.3)</span>
                             <div id="ufAdviesResult" class="text-2xl font-extrabold text-slate-700">0.0 kg</div>
                         </div>
                     </div>
@@ -153,13 +157,10 @@
                 
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-semibold uppercase text-slate-500">Verpleging (Meerdere selecties mogelijk)</label>
+                        <label class="text-xs font-semibold uppercase text-slate-500">Verpleging</label>
                         <button onclick="voegNieuweVerpleging()" class="text-xs bg-sky-100 text-sky-700 font-bold px-3 py-1.5 rounded-lg hover:bg-sky-200 transition">+ Nieuw Toevoegen</button>
                     </div>
-                    <!-- Direct zichtbare checklist met vakjes -->
-                    <div id="verplegingContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-slate-200 p-3 rounded-xl min-h-[50px]">
-                        <!-- Wordt direct geladen -->
-                    </div>
+                    <div id="verplegingContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-slate-200 p-3 rounded-xl min-h-[50px]"></div>
                 </div>
 
                 <div>
@@ -176,7 +177,7 @@
 
         <!-- TAB 2: ACTIEF OVERZICHT -->
         <div id="section-actief" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-slate-700">⚡ Actieve Behandelingen (Gepland & Bezig)</h2>
+            <h2 class="text-lg font-bold text-slate-700">⚡ Actieve Behandelingen</h2>
             <div id="actiefContainer" class="space-y-3"></div>
         </div>
 
@@ -204,6 +205,20 @@
             <div id="historieContainer" class="space-y-3"></div>
         </div>
 
+        <!-- TAB 4: CONFIGURATIE / STREEFGEWICHT -->
+        <div id="section-config" class="tab-content hidden space-y-4">
+            <h2 class="text-lg font-bold text-slate-700">⚙️ Instellingen & Streefgewicht</h2>
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Streefgewicht / Drooggewicht (kg)</label>
+                    <input type="number" step="0.1" id="configStreefgewicht" placeholder="109" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-base font-bold text-sky-700 outline-none focus:ring-2 focus:ring-sky-500">
+                    <span class="text-xs text-slate-400 mt-1 block">Dit gewicht wordt gebruikt in de formule: (Pregewicht - Streefgewicht + 0.3)</span>
+                </div>
+                <button onclick="slaConfigOp()" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-xl transition shadow-md">Streefgewicht Opslaan</button>
+            </div>
+        </div>
+
     </main>
 
     <!-- INZIEN POPUP -->
@@ -222,7 +237,7 @@
     <script>
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxrFTHSIyQSWT1qBEcl6Pv_CM5pr_0Za2qjvsDCZvfWc5p7J51DAuqrSJgV0db5BI-tRQ/exec";
 
-        let appConfig = { verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
+        let appConfig = { streefgewicht: 109, verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
         let gekozenVerpleging = [];
         let alleItems = [];
 
@@ -231,8 +246,6 @@
             document.getElementById('exportStart').value = vandaag;
             document.getElementById('exportEind').value = vandaag;
 
-            // Direct tonen met fallback, daarna ophalen
-            bouwVerplegingLijst();
             laadConfig();
             laadData();
         };
@@ -241,7 +254,7 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById('section-' + tabId).classList.remove('hidden');
 
-            document.querySelectorAll('.grid.grid-cols-3 button').forEach(btn => {
+            document.querySelectorAll('.grid.grid-cols-4 button').forEach(btn => {
                 btn.className = "py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition";
             });
             document.getElementById('tab-' + tabId).className = "py-2.5 rounded-xl bg-white text-sky-700 shadow-sm transition";
@@ -261,12 +274,39 @@
             fetch(`${WEB_APP_URL}?actie=getConfig`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data && data.verpleging && Array.isArray(data.verpleging) && data.verpleging.length > 0) {
-                        appConfig.verpleging = data.verpleging;
-                        bouwVerplegingLijst();
+                    if (data) {
+                        if (data.streefgewicht) appConfig.streefgewicht = data.streefgewicht;
+                        if (data.verpleging && Array.isArray(data.verpleging)) appConfig.verpleging = data.verpleging;
                     }
+                    document.getElementById('configStreefgewicht').value = appConfig.streefgewicht;
+                    document.getElementById('labelHuidigStreefgewicht').innerText = appConfig.streefgewicht;
+                    bouwVerplegingLijst();
+                    berekenUF();
                 })
-                .catch(err => console.warn("Kon config niet laden, gebruik standaardlijst", err));
+                .catch(err => {
+                    console.warn("Fout bij config laden", err);
+                    bouwVerplegingLijst();
+                });
+        }
+
+        function slaConfigOp() {
+            const nieuwGewicht = parseFloat(document.getElementById('configStreefgewicht').value);
+            if (!nieuwGewicht || nieuwGewicht <= 0) return toonStatus("Voer een geldig streefgewicht in.", true);
+
+            appConfig.streefgewicht = nieuwGewicht;
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ actie: 'updateConfig', ...appConfig })
+            })
+            .then(res => res.json())
+            .then(res => {
+                toonStatus(res.message);
+                document.getElementById('labelHuidigStreefgewicht').innerText = appConfig.streefgewicht;
+                berekenUF();
+                switchTab('invoer');
+            })
+            .catch(err => toonStatus("Fout bij opslaan streefgewicht", true));
         }
 
         function bouwVerplegingLijst() {
@@ -274,9 +314,7 @@
             if (!container) return;
             container.innerHTML = '';
             
-            const lijst = appConfig.verpleging.length > 0 ? appConfig.verpleging : ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'];
-
-            lijst.forEach(naam => {
+            appConfig.verpleging.forEach(naam => {
                 const isChecked = gekozenVerpleging.includes(naam) ? 'checked' : '';
                 container.innerHTML += `
                     <label class="flex items-center gap-2.5 p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-sky-50 cursor-pointer select-none shadow-sm">
@@ -322,13 +360,16 @@
         function berekenUF() {
             const pre = parseFloat(document.getElementById('pregewicht').value) || 0;
             const post = parseFloat(document.getElementById('postgewicht').value) || 0;
+            const streefgewicht = appConfig.streefgewicht || 109;
+
             if (pre > 0 && post > 0) {
                 document.getElementById('werkelijkUf').value = (pre - post).toFixed(2) + " kg";
             } else {
                 document.getElementById('werkelijkUf').value = "";
             }
             if (pre > 0) {
-                document.getElementById('ufAdviesResult').innerText = (pre - 109 + 0.3).toFixed(2) + " kg";
+                const advies = (pre - streefgewicht + 0.3).toFixed(2);
+                document.getElementById('ufAdviesResult').innerText = advies + " kg";
             } else {
                 document.getElementById('ufAdviesResult').innerText = "0.0 kg";
             }
@@ -520,7 +561,7 @@
 
             fetch(WEB_APP_URL, {
                 method: 'POST',
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ actie: 'slaDialyseOp', ...payload })
             })
             .then(res => res.json())
             .then(res => {
