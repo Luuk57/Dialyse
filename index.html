@@ -207,7 +207,7 @@
 
         <!-- TAB 4: CONFIGURATIE / STREEFGEWICHT -->
         <div id="section-config" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-slate-700">⚙️ Instellingen & Streefgewicht</h2>
+            <h2 class="text-lg font-bold text-slate-700">⚙️️ Instellingen & Streefgewicht</h2>
             
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
                 <div>
@@ -235,7 +235,7 @@
 
     <!-- JavaScript Logica -->
     <script>
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxrFTHSIyQSWT1qBEcl6Pv_CM5pr_0Za2qjvsDCZvfWc5p7J51DAuqrSJgV0db5BI-tRQ/exec";
+        const WEB_APP_URL = "VERVANG_DIT_MET_JE_GOOGLE_APPS_SCRIPT_URL";
 
         let appConfig = { streefgewicht: 109, verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
         let gekozenVerpleging = [];
@@ -408,7 +408,6 @@
             let s = String(isoStr).trim();
             let d = new Date(s);
             if (!isNaN(d.getTime())) {
-                // Correcte lokale weergave zonder UTC verschuiving
                 let dag = String(d.getDate()).padStart(2, '0');
                 let maand = String(d.getMonth() + 1).padStart(2, '0');
                 let jaar = d.getFullYear();
@@ -486,7 +485,6 @@
             if (!str) return '';
             let d = new Date(str);
             if (isNaN(d.getTime())) return String(str).substring(0, 16);
-            // Omzetten naar lokale ISO notatie voor datetime-local input
             let tzOffset = d.getTimezoneOffset() * 60000;
             let localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, 16);
             return localISOTime;
@@ -634,14 +632,11 @@
         function exporteerData(formaat) {
             const start = document.getElementById('exportStart').value;
             const eind = document.getElementById('exportEind').value;
+            const actie = formaat === 'pdf' ? 'exporteerPdf' : 'exporteerExcel';
 
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ actie: 'exporteerDialysePeriode', start: start, eind: eind, formaat: formaat })
-            })
-            .then(res => res.json())
-            .then(res => toonStatus(res.message))
-            .catch(err => toonStatus("Export fout: " + err, true));
+            toonStatus("Bezig met genereren van " + formaat.toUpperCase() + "...");
+            const downloadUrl = `${WEB_APP_URL}?actie=${actie}&start=${start}&eind=${eind}`;
+            window.open(downloadUrl, '_blank');
         }
     </script>
 </body>
