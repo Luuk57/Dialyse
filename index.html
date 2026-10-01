@@ -1,643 +1,364 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasker - Dialyse Module</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <meta name="theme-color" content="#0284c7">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klinisch Dashboard - Dialyse Planning & Invoer</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<meta name="theme-color" content="#0f172a">
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
-
-    <!-- Header -->
-    <header class="bg-sky-700 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
-                🩺 Tasker - Dialyse Module
-            </h1>
-            <span id="statusBadgeHeader" class="text-xs bg-sky-800 px-3 py-1 rounded-full text-white font-bold">Gepland</span>
-        </div>
-    </header>
-
-    <!-- Main Container -->
-    <main class="max-w-4xl w-full mx-auto p-4 flex-grow space-y-6 pb-20">
-
-        <div id="statusMessage" class="hidden p-4 rounded-xl text-sm font-medium transition-all shadow-sm"></div>
-
-        <!-- Tabs Navigatie -->
-        <div class="grid grid-cols-4 gap-1 bg-slate-200 p-1.5 rounded-2xl text-xs font-bold text-center">
-            <button onclick="switchTab('invoer')" id="tab-invoer" class="py-2.5 rounded-xl bg-white text-sky-700 shadow-sm transition">➕ Invoer</button>
-            <button onclick="switchTab('actief')" id="tab-actief" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">⚡ Actief</button>
-            <button onclick="switchTab('historie')" id="tab-historie" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">📊 Historie</button>
-            <button onclick="switchTab('config')" id="tab-config" class="py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition">⚙️ Config</button>
-        </div>
-
-        <!-- TAB 1: INVOER & BEWERKEN -->
-        <div id="section-invoer" class="tab-content space-y-6">
-            <input type="hidden" id="bewerkId" value="">
-
-            <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
-                <div class="flex justify-between items-center border-b pb-2">
-                    <h2 id="formTitel" class="text-lg font-bold text-slate-700">📅 Nieuwe Dialyse Invoeren</h2>
-                    <button onclick="resetFormulier()" class="text-xs bg-slate-200 text-slate-700 font-bold px-3 py-1 rounded-lg">Formulier Leegmaken</button>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Afspraak Datum/Tijd</label>
-                        <input type="datetime-local" id="afspraak" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Start Datum/Tijd</label>
-                        <input type="datetime-local" id="start" oninput="bepaalStatus()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Stop Datum/Tijd</label>
-                        <input type="datetime-local" id="stop" oninput="bepaalStatus()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Type Dialyse</label>
-                        <select id="typeDialyse" onchange="berekenUF()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                            <option value="Nacht (0,3)">Nacht (0,3)</option>
-                            <option value="Dag (0,6)">Dag (0,6)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Herhaling</label>
-                        <select id="herhaling" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                            <option value="geen">Geen</option>
-                            <option value="elke dag">Elke dag</option>
-                            <option value="om de dag">Om de dag</option>
-                            <option value="ma wo vrij">Ma - Wo - Vrij</option>
-                            <option value="di do za">Di - Do - Za</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Eind Datum Herhaling</label>
-                        <input type="date" id="eindHerhaling" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                </div>
-            </section>
-
-            <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
-                <div class="flex justify-between items-center border-b pb-2">
-                    <h2 class="text-lg font-bold text-slate-700">⚖️ Gewichten & UF</h2>
-                    <span class="text-xs bg-sky-50 text-sky-700 font-semibold px-2.5 py-1 rounded-lg">Streefgewicht: <span id="labelHuidigStreefgewicht">109</span> kg</span>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Pregewicht (kg)</label>
-                        <input type="number" step="0.1" id="pregewicht" placeholder="bijv. 112.5" oninput="berekenUF()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Postgewicht (kg)</label>
-                        <input type="number" step="0.1" id="postgewicht" placeholder="bijv. 109.0" oninput="berekenUF()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Werkelijke UF (Pre - Post)</label>
-                        <input type="text" id="werkelijkUf" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div id="ufAdviesBox" class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center transition-all">
-                        <div>
-                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">UF Advies (&ge;4.5 Rood, &ge;4.0 Oranje, &lt;4.0 Groen)</span>
-                            <div id="ufAdviesResult" class="text-2xl font-extrabold text-slate-700">0.0 kg</div>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Gekozen UF (kg)</label>
-                        <input type="number" step="0.1" id="gekozenUf" placeholder="bijv. 3.5" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500">
-                    </div>
-                </div>
-            </section>
-
-            <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
-                <h2 class="text-lg font-bold text-slate-700 border-b pb-2">💊 Medicatie & Opties</h2>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                        <input type="checkbox" id="checkFragmin2500" class="w-5 h-5 text-sky-600 rounded">
-                        <label class="text-sm font-semibold flex-grow">Fragmin 2500</label>
-                        <input type="number" id="valFragmin2500" placeholder="Hoeveelheid" class="w-28 bg-white border border-slate-200 rounded-lg p-2 text-sm">
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                        <input type="checkbox" id="checkFragmin5000" class="w-5 h-5 text-sky-600 rounded">
-                        <label class="text-sm font-semibold flex-grow">Fragmin 5000</label>
-                        <input type="number" id="valFragmin5000" placeholder="Hoeveelheid" class="w-28 bg-white border border-slate-200 rounded-lg p-2 text-sm">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                        <input type="checkbox" id="checkEpo" class="w-5 h-5 text-sky-600 rounded">
-                        <label class="text-sm font-semibold">Epo</label>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-                        <input type="checkbox" id="checkIjzer" class="w-5 h-5 text-sky-600 rounded">
-                        <label class="text-sm font-semibold">Ijzer</label>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col gap-2">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" id="checkShuntflow" onchange="toggleShuntflow()" class="w-5 h-5 text-sky-600 rounded">
-                            <label class="text-sm font-semibold">Shuntflow</label>
-                        </div>
-                        <input type="number" id="valShuntflow" placeholder="Waarde" class="hidden w-full bg-white border border-slate-200 rounded-lg p-2 text-sm">
-                    </div>
-                </div>
-            </section>
-
-            <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
-                <h2 class="text-lg font-bold text-slate-700 border-b pb-2">👩‍⚕️ Verpleging & Notities</h2>
-                
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-semibold uppercase text-slate-500">Verpleging</label>
-                        <button onclick="voegNieuweVerpleging()" class="text-xs bg-sky-100 text-sky-700 font-bold px-3 py-1.5 rounded-lg hover:bg-sky-200 transition">+ Nieuw Toevoegen</button>
-                    </div>
-                    <div id="verplegingContainer" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-slate-200 p-3 rounded-xl min-h-[50px]"></div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Bijzonderheden</label>
-                    <textarea id="bijzonderheden" rows="3" placeholder="Eventuele opmerkingen..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-sky-500"></textarea>
-                </div>
-            </section>
-
-            <div class="flex flex-col sm:flex-row gap-3">
-                <button onclick="slaDialyseOp(true)" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Tijdelijk Opslaan (Concept)</button>
-                <button onclick="slaDialyseOp(false)" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-md transition">Wijzigingen Opslaan</button>
-            </div>
-        </div>
-
-        <!-- TAB 2: ACTIEF OVERZICHT -->
-        <div id="section-actief" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-slate-700">⚡ Actieve Behandelingen</h2>
-            <div id="actiefContainer" class="space-y-3"></div>
-        </div>
-
-        <!-- TAB 3: HISTORIE & PDF -->
-        <div id="section-historie" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-slate-700">📊 Historie & Medische Rapportage</h2>
-            
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Startdatum</label>
-                        <input type="date" id="exportStart" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Einddatum</label>
-                        <input type="date" id="exportEind" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm">
-                    </div>
-                </div>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <button onclick="exporteerData('pdf')" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl transition text-sm">Exporteer Medische PDF</button>
-                    <button onclick="exporteerData('excel')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition text-sm">Exporteer Excel / CSV</button>
-                </div>
-            </div>
-
-            <div id="historieContainer" class="space-y-3"></div>
-        </div>
-
-        <!-- TAB 4: CONFIGURATIE -->
-        <div id="section-config" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-slate-700">⚙ Instellingen & Streefgewicht</h2>
-            
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Streefgewicht / Drooggewicht (kg)</label>
-                    <input type="number" step="0.1" id="configStreefgewicht" placeholder="109" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-base font-bold text-sky-700 outline-none focus:ring-2 focus:ring-sky-500">
-                    <span class="text-xs text-slate-400 mt-1 block">Formule: Pregewicht - Streefgewicht + 0.3 (Nacht) of + 0.6 (Dag)</span>
-                </div>
-                <button onclick="slaConfigOp()" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3.5 rounded-xl transition shadow-md">Streefgewicht Opslaan</button>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- INZIEN POPUP -->
-    <div id="inzienModal" class="fixed inset-0 bg-black/50 hidden flex justify-center items-center z-50 p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-xl">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-lg text-slate-700">🔍 Behandeling Inzien</h3>
-                <button onclick="sluitInzienModal()" class="text-red-500 font-bold text-lg">✕</button>
-            </div>
-            <div id="modalInhoud" class="space-y-3 text-sm text-slate-600"></div>
-            <button onclick="sluitInzienModal()" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded-xl">Sluiten</button>
-        </div>
-    </div>
-
-    <!-- JavaScript Logica -->
-    <script>
-        // Jouw actieve Google Apps Script Web App URL is hier gekoppeld:
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxrFTHSIyQSWT1qBEcl6Pv_CM5pr_0Za2qjvsDCZvfWc5p7J51DAuqrSJgV0db5BI-tRQ/exec";
-
-        let appConfig = { streefgewicht: 109, verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
-        let gekozenVerpleging = [];
-        let alleItems = [];
-
-        window.onload = function() {
-            const vandaag = new Date().toISOString().split('T')[0];
-            document.getElementById('exportStart').value = vandaag;
-            document.getElementById('exportEind').value = vandaag;
-
-            laadConfig();
-            laadData();
-        };
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById('section-' + tabId).classList.remove('hidden');
-
-            document.querySelectorAll('.grid.grid-cols-4 button').forEach(btn => {
-                btn.className = "py-2.5 rounded-xl text-slate-600 hover:text-slate-900 transition";
-            });
-            document.getElementById('tab-' + tabId).className = "py-2.5 rounded-xl bg-white text-sky-700 shadow-sm transition";
-
-            if (tabId === 'actief' || tabId === 'historie') laadData();
-        }
-
-        function toonStatus(bericht, isFout = false) {
-            const el = document.getElementById('statusMessage');
-            el.innerText = bericht;
-            el.className = `p-4 rounded-xl text-sm font-medium transition-all shadow-sm ${isFout ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 4000);
-        }
-
-        function laadConfig() {
-            fetch(`${WEB_APP_URL}?actie=getConfig`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data) {
-                        if (data.streefgewicht) appConfig.streefgewicht = data.streefgewicht;
-                        if (data.verpleging && Array.isArray(data.verpleging)) appConfig.verpleging = data.verpleging;
-                    }
-                    document.getElementById('configStreefgewicht').value = appConfig.streefgewicht;
-                    document.getElementById('labelHuidigStreefgewicht').innerText = appConfig.streefgewicht;
-                    bouwVerplegingLijst();
-                    berekenUF();
-                })
-                .catch(err => {
-                    console.warn("Fout bij config laden", err);
-                    bouwVerplegingLijst();
-                });
-        }
-
-        function slaConfigOp() {
-            const nieuwGewicht = parseFloat(document.getElementById('configStreefgewicht').value);
-            if (!nieuwGewicht || nieuwGewicht <= 0) return toonStatus("Voer een geldig streefgewicht in.", true);
-
-            appConfig.streefgewicht = nieuwGewicht;
-
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ actie: 'updateConfig', ...appConfig })
-            })
-            .then(res => res.json())
-            .then(res => {
-                toonStatus(res.message);
-                document.getElementById('labelHuidigStreefgewicht').innerText = appConfig.streefgewicht;
-                berekenUF();
-                switchTab('invoer');
-            })
-            .catch(err => toonStatus("Fout bij opslaan streefgewicht", true));
-        }
-
-        function bouwVerplegingLijst() {
-            const container = document.getElementById('verplegingContainer');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            appConfig.verpleging.forEach(naam => {
-                const isChecked = gekozenVerpleging.includes(naam) ? 'checked' : '';
-                container.innerHTML += `
-                    <label class="flex items-center gap-2.5 p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-sky-50 cursor-pointer select-none shadow-sm">
-                        <input type="checkbox" value="${naam}" ${isChecked} onchange="updateVerplegingSelectie(this)" class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500">
-                        <span class="text-sm font-bold text-slate-700">${naam}</span>
-                    </label>
-                `;
-            });
-        }
-
-        function updateVerplegingSelectie(checkbox) {
-            const naam = checkbox.value;
-            if (checkbox.checked) {
-                if (!gekozenVerpleging.includes(naam)) gekozenVerpleging.push(naam);
-            } else {
-                gekozenVerpleging = gekozenVerpleging.filter(n => n !== naam);
-            }
-        }
-
-        function voegNieuweVerpleging() {
-            const naam = prompt("Naam nieuwe verpleegkundige:");
-            if (!naam || !naam.trim()) return;
-
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ actie: 'voegVerplegingToe', waarde: naam.trim() })
-            })
-            .then(res => res.json())
-            .then(res => {
-                toonStatus(res.message);
-                laadConfig();
-            })
-            .catch(err => toonStatus("Fout bij toevoegen", true));
-        }
-
-        function toggleShuntflow() {
-            const chk = document.getElementById('checkShuntflow').checked;
-            const inp = document.getElementById('valShuntflow');
-            if (chk) inp.classList.remove('hidden');
-            else { inp.classList.add('hidden'); inp.value = ''; }
-        }
-
-        function berekenUF() {
-            const pre = parseFloat(document.getElementById('pregewicht').value) || 0;
-            const post = parseFloat(document.getElementById('postgewicht').value) || 0;
-            const streefgewicht = appConfig.streefgewicht || 109;
-            const type = document.getElementById('typeDialyse').value.toLowerCase();
-            const correctie = type.includes('dag') ? 0.6 : 0.3;
-
-            if (pre > 0 && post > 0) {
-                document.getElementById('werkelijkUf').value = (pre - post).toFixed(2) + " kg";
-            } else {
-                document.getElementById('werkelijkUf').value = "";
-            }
-
-            const ufBox = document.getElementById('ufAdviesBox');
-            const ufRes = document.getElementById('ufAdviesResult');
-
-            if (pre > 0) {
-                const adviesNum = pre - streefgewicht + correctie;
-                const adviesStr = adviesNum.toFixed(2) + " kg";
-                ufRes.innerText = adviesStr;
-
-                // Kleurcodering logica: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
-                ufBox.className = "p-4 rounded-xl border flex justify-between items-center transition-all shadow-sm";
-                if (adviesNum >= 4.5) {
-                    ufBox.classList.add('bg-red-50', 'border-red-300');
-                    ufRes.className = "text-2xl font-extrabold text-red-700";
-                } else if (adviesNum >= 4.0) {
-                    ufBox.classList.add('bg-amber-50', 'border-amber-300');
-                    ufRes.className = "text-2xl font-extrabold text-amber-700";
-                } else {
-                    ufBox.classList.add('bg-emerald-50', 'border-emerald-300');
-                    ufRes.className = "text-2xl font-extrabold text-emerald-700";
-                }
-            } else {
-                ufRes.innerText = "0.0 kg";
-                ufBox.className = "p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center transition-all";
-                ufRes.className = "text-2xl font-extrabold text-slate-700";
-            }
-        }
-
-        function bepaalStatus() {
-            const start = document.getElementById('start').value;
-            const stop = document.getElementById('stop').value;
-            const badge = document.getElementById('statusBadgeHeader');
-
-            if (stop) {
-                badge.innerText = "Gereed";
-                badge.className = "text-xs bg-emerald-600 px-3 py-1 rounded-full text-white font-bold shadow-sm";
-            } else if (start) {
-                badge.innerText = "Bezig";
-                badge.className = "text-xs bg-amber-500 px-3 py-1 rounded-full text-white font-bold shadow-sm";
-            } else {
-                badge.innerText = "Gepland";
-                badge.className = "text-xs bg-sky-800 px-3 py-1 rounded-full text-white font-bold shadow-sm";
-            }
-        }
-
-        function resetFormulier() {
-            document.getElementById('bewerkId').value = '';
-            document.getElementById('formTitel').innerText = "📅 Nieuwe Dialyse Invoeren";
-            document.querySelectorAll('input:not([type=date]), textarea').forEach(el => el.value = '');
-            document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
-            document.getElementById('valShuntflow').classList.add('hidden');
-            gekozenVerpleging = [];
-            bouwVerplegingLijst();
-            berekenUF();
-            bepaalStatus();
-        }
-
-        function formatteerDatumWeergave(isoStr) {
-            if (!isoStr) return '-';
-            let d = new Date(String(isoStr).trim());
-            if (!isNaN(d.getTime())) {
-                let dag = String(d.getDate()).padStart(2, '0');
-                let maand = String(d.getMonth() + 1).padStart(2, '0');
-                let jaar = d.getFullYear();
-                let uur = String(d.getHours()).padStart(2, '0');
-                let min = String(d.getMinutes()).padStart(2, '0');
-                return `${dag}-${maand}-${jaar} ${uur}:${min}`;
-            }
-            return isoStr;
-        }
-
-        function laadData() {
-            fetch(`${WEB_APP_URL}?actie=getDialyseOverzicht`)
-                .then(res => res.json())
-                .then(items => {
-                    alleItems = items;
-                    renderActief(items.filter(i => i.status === 'Gepland' || i.status === 'Bezig'));
-                    renderHistorie(items.filter(i => i.status === 'Gereed'));
-                })
-                .catch(err => console.warn("Kon data niet laden", err));
-        }
-
-        function renderActief(items) {
-            const container = document.getElementById('actiefContainer');
-            container.innerHTML = '';
-            if (items.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 italic">Geen actieve behandelingen</p>`;
-                return;
-            }
-            items.forEach(i => {
-                const badgeColor = i.status === 'Bezig' ? 'bg-amber-500 text-white' : 'bg-sky-600 text-white';
-                container.innerHTML += `
-                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeColor}">${i.status}</span>
-                            <div class="font-bold text-slate-700 mt-1">Start: ${formatteerDatumWeergave(i.start || i.afspraak)}</div>
-                            <div class="text-xs text-slate-500">Type: ${i.type} | Gekozen UF: ${i.gekozenUf || '-'} kg</div>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="inzienItem('${i.id}')" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold">Inzien</button>
-                            <button onclick="bewerkItem('${i.id}')" class="flex-1 sm:flex-none bg-sky-100 hover:bg-sky-200 text-sky-700 px-3 py-1.5 rounded-lg text-xs font-bold">Bewerken</button>
-                            <button onclick="verwijderItem('${i.id}')" class="flex-1 sm:flex-none bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold">Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function renderHistorie(items) {
-            const container = document.getElementById('historieContainer');
-            container.innerHTML = '';
-            if (items.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 italic">Geen afgeronde behandelingen</p>`;
-                return;
-            }
-            items.forEach(i => {
-                container.innerHTML += `
-                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white">Gereed</span>
-                            <div class="font-bold text-slate-700 mt-1">Afgerond op: ${formatteerDatumWeergave(i.stop || i.start)}</div>
-                            <div class="text-xs text-slate-500">Type: ${i.type} | Werkelijke UF: ${i.werkelijkUf || '-'}</div>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="inzienItem('${i.id}')" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold">Inzien</button>
-                            <button onclick="verwijderItem('${i.id}')" class="flex-1 sm:flex-none bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold">Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function formaatVoorInput(str) {
-            if (!str) return '';
-            let d = new Date(str);
-            if (isNaN(d.getTime())) return String(str).substring(0, 16);
-            let tzOffset = d.getTimezoneOffset() * 60000;
-            return (new Date(d - tzOffset)).toISOString().slice(0, 16);
-        }
-
-        function bewerkItem(id) {
-            const item = alleItems.find(i => String(i.id).trim() === String(id).trim());
-            if (!item) return toonStatus("Kon item niet vinden om te bewerken", true);
-
-            document.getElementById('bewerkId').value = String(item.id);
-            document.getElementById('formTitel').innerText = "✏️ Behandeling Bewerken (ID: " + item.id + ")";
-            
-            document.getElementById('afspraak').value = formaatVoorInput(item.afspraak);
-            document.getElementById('start').value = formaatVoorInput(item.start);
-            document.getElementById('stop').value = formaatVoorInput(item.stop);
-            document.getElementById('typeDialyse').value = item.type || 'Nacht (0,3)';
-            document.getElementById('herhaling').value = item.herhaling || 'geen';
-            document.getElementById('eindHerhaling').value = item.eindHerhaling || '';
-            document.getElementById('pregewicht').value = item.pregewicht || '';
-            document.getElementById('postgewicht').value = item.postgewicht || '';
-            document.getElementById('gekozenUf').value = item.gekozenUf || '';
-            document.getElementById('bijzonderheden').value = item.bijzonderheden || '';
-
-            document.getElementById('checkFragmin2500').checked = Boolean(item.fragmin2500);
-            document.getElementById('valFragmin2500').value = item.fragmin2500 || '';
-            document.getElementById('checkFragmin5000').checked = Boolean(item.fragmin5000);
-            document.getElementById('valFragmin5000').value = item.fragmin5000 || '';
-
-            document.getElementById('checkEpo').checked = Boolean(item.epo);
-            document.getElementById('checkIjzer').checked = Boolean(item.ijzer);
-
-            if (item.shuntflow) {
-                document.getElementById('checkShuntflow').checked = true;
-                document.getElementById('valShuntflow').value = item.shuntflow;
-                document.getElementById('valShuntflow').classList.remove('hidden');
-            } else {
-                document.getElementById('checkShuntflow').checked = false;
-                document.getElementById('valShuntflow').value = '';
-                document.getElementById('valShuntflow').classList.add('hidden');
-            }
-
-            gekozenVerpleging = item.verpleging || [];
-            bouwVerplegingLijst();
-            berekenUF();
-            bepaalStatus();
-            switchTab('invoer');
-        }
-
-        function inzienItem(id) {
-            const i = alleItems.find(x => String(x.id).trim() === String(id).trim());
-            if (!i) return;
-
-            document.getElementById('modalInhoud').innerHTML = `
-                <div><strong>Status:</strong> ${i.status}</div>
-                <div><strong>Afspraak:</strong> ${formatteerDatumWeergave(i.afspraak)}</div>
-                <div><strong>Start / Stop:</strong> ${formatteerDatumWeergave(i.start)} / ${formatteerDatumWeergave(i.stop)}</div>
-                <div><strong>Type:</strong> ${i.type} (${i.herhaling})</div>
-                <div><strong>Pregewicht / Postgewicht:</strong> ${i.pregewicht || '-'} kg / ${i.postgewicht || '-'} kg</div>
-                <div><strong>UF Advies / Gekozen / Werkelijk:</strong> ${i.ufAdvies} / ${i.gekozenUf || '-'} kg / ${i.werkelijkUf || '-'}</div>
-                <div><strong>Fragmin 2500 / 5000:</strong> ${i.fragmin2500 || '-'} / ${i.fragmin5000 || '-'}</div>
-                <div><strong>Epo / Ijzer / Shuntflow:</strong> ${i.epo || 'Nee'} / ${i.ijzer || 'Nee'} / ${i.shuntflow || 'Nee'}</div>
-                <div><strong>Verpleging:</strong> ${(i.verpleging || []).join(', ') || '-'}</div>
-                <div><strong>Bijzonderheden:</strong> ${i.bijzonderheden || '-'}</div>
-            `;
-            document.getElementById('inzienModal').classList.remove('hidden');
-        }
-
-        function sluitInzienModal() {
-            document.getElementById('inzienModal').classList.add('hidden');
-        }
-
-        function verwijderItem(id) {
-            if (!confirm("Weet je zeker dat je deze behandeling wilt verwijderen?")) return;
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ actie: 'verwijderDialyseItem', id: id })
-            })
-            .then(res => res.json())
-            .then(res => {
-                toonStatus(res.message);
-                laadData();
-            });
-        }
-
-        function slaDialyseOp(isConcept) {
-            const bestaandId = document.getElementById('bewerkId').value.trim();
-            const id = bestaandId !== "" ? bestaandId : ('DIALYSE-' + Date.now());
-
-            const payload = {
-                actie: 'slaDialyseOp',
-                id: id,
-                afspraak: document.getElementById('afspraak').value,
-                start: document.getElementById('start').value,
-                stop: document.getElementById('stop').value,
-                type: document.getElementById('typeDialyse').value,
-                herhaling: document.getElementById('herhaling').value,
-                eindHerhaling: document.getElementById('eindHerhaling').value,
-                pregewicht: document.getElementById('pregewicht').value,
-                postgewicht: document.getElementById('postgewicht').value,
-                ufAdvies: document.getElementById('ufAdviesResult').innerText,
-                gekozenUf: document.getElementById('gekozenUf').value,
-                werkelijkUf: document.getElementById('werkelijkUf').value,
-                fragmin2500: document.getElementById('checkFragmin2500').checked ? (document.getElementById('valFragmin2500').value || 'Ja') : '',
-                fragmin5000: document.getElementById('checkFragmin5000').checked ? (document.getElementById('valFragmin5000').value || 'Ja') : '',
-                epo: document.getElementById('checkEpo').checked ? 'Ja' : '',
-                ijzer: document.getElementById('checkIjzer').checked ? 'Ja' : '',
-                shuntflow: document.getElementById('checkShuntflow').checked ? (document.getElementById('valShuntflow').value || 'Ja') : '',
-                verpleging: gekozenVerpleging,
-                bijzonderheden: document.getElementById('bijzonderheden').value
-            };
-
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(res => {
-                toonStatus(isConcept ? "Tijdelijk opgeslagen als concept." : res.message);
-                resetFormulier();
-                laadData();
-                switchTab('actief');
-            })
-            .catch(err => toonStatus("Fout bij opslaan: " + err, true));
-        }
-
-        function exporteerData(formaat) {
-            const start = document.getElementById('exportStart').value;
-            const eind = document.getElementById('exportEind').value;
-            const actie = formaat === 'pdf' ? 'exporteerPdf' : 'exporteerExcel';
-
-            toonStatus("Bezig met genereren van " + formaat.toUpperCase() + "...");
-            window.open(`${WEB_APP_URL}?actie=${actie}&start=${start}&eind=${eind}`, '_blank');
-        }
-    </script>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+​<!-- Klinische Header -->
+<header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-50">
+<div class="max-w-6xl mx-auto px-4 py-3.5 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></div>
+<h1 class="text-base font-bold tracking-wider text-slate-100 uppercase">
+Klinisch Portaal <span class="text-cyan-400 font-normal">| Hemodialyse Module</span>
+</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-right hidden sm:block">
+<div class="text-xs text-slate-400">Patiënt ID: <span class="text-slate-200 font-mono">HD-9042</span></div>
+<div class="text-xs text-cyan-400 font-medium">Drooggewicht: <span id="headerStreefgewicht">109.0</span> kg</div>
+</div>
+<span id="statusBadgeHeader" class="text-xs bg-cyan-950 text-cyan-400 border border-cyan-800 px-3 py-1 rounded-md font-semibold tracking-wide">STATUS: GEREED VOOR PLANNING</span>
+</div>
+</div>
+</header>
+​<!-- Hoofdinhoud -->
+<main class="max-w-6xl w-full mx-auto p-4 md:p-6 flex-grow space-y-6 pb-24">
+​<!-- Systeem Meldingen -->
+<div id="statusMessage" class="hidden p-4 rounded-lg text-sm font-medium border transition-all shadow-md"></div>
+​<!-- Snelle Navigatie / Sectie Selectie -->
+<div class="flex border-b border-slate-800 pb-2 gap-4 text-sm font-semibold">
+<button class="text-cyan-400 border-b-2 border-cyan-400 pb-2 -mb-2.5 flex items-center gap-2">
+📅 Planning & Behandelingsinvoer
+</button>
+<button onclick="alert('Volgende modules worden geladen in de volgende fase.')" class="text-slate-400 hover:text-slate-200 pb-2 -mb-2.5 transition">
+📊 Actief & Historie Overzicht
+</button>
+<button onclick="alert('Volgende modules worden geladen in de volgende fase.')" class="text-slate-400 hover:text-slate-200 pb-2 -mb-2.5 transition">
+⚙️ Configuratie & Parameters
+</button>
+</div>
+​<!-- FORMULIER HOOFDCONTAINER -->
+<div class="space-y-6">
+<input type="hidden" id="bewerkId" value="">
+​<!-- BLOK 1: TIDSPLANNING & REGIME -->
+<section class="bg-slate-950 rounded-xl border border-slate-800 p-5 space-y-4 shadow-xl">
+<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+<h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+⏱️ 1. Tijdsschema & Behandelingsregime
+</h2>
+<button onclick="resetFormulier()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium px-3 py-1.5 rounded transition">Formulier Wissen</button>
+</div>
+​<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Afspraak Datum & Tijd</label>
+<input type="datetime-local" id="afspraak" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Start Dialyse (Klinisch)</label>
+<input type="datetime-local" id="start" oninput="bepaalStatus()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Stop Dialyse (Klinisch)</label>
+<input type="datetime-local" id="stop" oninput="bepaalStatus()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none">
+</div>
+</div>
+​<div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Modaliteit / Type</label>
+<select id="typeDialyse" onchange="berekenUF()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none">
+<option value="Nacht (0,3)">Nachtdialyse (Correctie +0,3 kg)</option>
+<option value="Dag (0,6)">Dagdialyse (Correctie +0,6 kg)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Herhalingsschema</label>
+<select id="herhaling" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none">
+<option value="geen">Eenmalig (Geen herhaling)</option>
+<option value="elke dag">Elke dag</option>
+<option value="om de dag">Om de dag</option>
+<option value="ma wo vrij">Maandag - Woensdag - Vrijdag</option>
+<option value="di do za">Dinsdag - Donderdag - Zaterdag</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Einddatum Herhaling</label>
+<input type="date" id="eindHerhaling" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none">
+</div>
+</div>
+</section>
+​<!-- BLOK 2: GEWICHTSMANAGEMENT & ULTRAFILTRATIE (UF) -->
+<section class="bg-slate-950 rounded-xl border border-slate-800 p-5 space-y-4 shadow-xl">
+<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+<h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+⚖️ 2. Gewichtsmeting & Ultrafiltratie (UF) Berekening
+</h2>
+<span class="text-xs bg-slate-900 border border-slate-700 px-3 py-1 rounded text-slate-300 font-mono">Streefgewicht: <span id="labelHuidigStreefgewicht" class="text-cyan-400 font-bold">109.0</span> kg</span>
+</div>
+​<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Pregewicht (kg)</label>
+<input type="number" step="0.1" id="pregewicht" placeholder="Bijv. 112.5" oninput="berekenUF()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 font-mono focus:border-cyan-500 outline-none">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Postgewicht (kg)</label>
+<input type="number" step="0.1" id="postgewicht" placeholder="Bijv. 109.0" oninput="berekenUF()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 font-mono focus:border-cyan-500 outline-none">
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Werkelijke UF (Pre - Post)</label>
+<input type="text" id="werkelijkUf" readonly class="w-full bg-slate-900/50 border border-slate-800 rounded-lg p-2.5 text-sm font-bold text-slate-300 font-mono">
+</div>
+</div>
+​<div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+<div id="ufAdviesBox" class="p-4 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center transition-all">
+<div>
+<span class="block text-[10px] font-bold uppercase text-slate-400 tracking-wider">Klinisch UF Advies (Formule: Pre - Drooggewicht + Correctie)</span>
+<div id="ufAdviesResult" class="text-2xl font-extrabold text-slate-200 font-mono mt-0.5">0.0 kg</div>
+</div>
+<div class="text-right text-[10px] text-slate-500 leading-tight">
+<span>Risico-indicatie:</span>
+
+<span class="text-emerald-400"><4.0 Normaal</span> | <span class="text-amber-400">≥4.0 Attentie</span> | <span class="text-rose-400">≥4.5 Hoog</span>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Gekozen / Prescriptie UF (kg)</label>
+<input type="number" step="0.1" id="gekozenUf" placeholder="Bijv. 3.5" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 font-mono focus:border-cyan-500 outline-none">
+</div>
+</div>
+</section>
+​<!-- BLOK 3: MEDICATIE & TOEBEHOREN -->
+<section class="bg-slate-950 rounded-xl border border-slate-800 p-5 space-y-4 shadow-xl">
+<h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 border-b border-slate-800 pb-3">
+💊 3. Medicatie & Intradialytische Toevoegingen
+</h2>
+​<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-slate-900 p-3.5 rounded-lg border border-slate-800 flex items-center gap-3">
+<input type="checkbox" id="checkFragmin2500" class="w-4 h-4 accent-cyan-500 rounded bg-slate-950 border-slate-700">
+<label class="text-xs font-semibold uppercase text-slate-300 flex-grow">Fragmin 2500 IE</label>
+<input type="number" id="valFragmin2500" placeholder="Dosering" class="w-24 bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono">
+</div>
+<div class="bg-slate-900 p-3.5 rounded-lg border border-slate-800 flex items-center gap-3">
+<input type="checkbox" id="checkFragmin5000" class="w-4 h-4 accent-cyan-500 rounded bg-slate-950 border-slate-700">
+<label class="text-xs font-semibold uppercase text-slate-300 flex-grow">Fragmin 5000 IE</label>
+<input type="number" id="valFragmin5000" placeholder="Dosering" class="w-24 bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono">
+</div>
+</div>
+​<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-slate-900 p-3.5 rounded-lg border border-slate-800 flex items-center gap-3">
+<input type="checkbox" id="checkEpo" class="w-4 h-4 accent-cyan-500 rounded bg-slate-950 border-slate-700">
+<label class="text-xs font-semibold uppercase text-slate-300">Erytropoëtine (Epo)</label>
+</div>
+<div class="bg-slate-900 p-3.5 rounded-lg border border-slate-800 flex items-center gap-3">
+<input type="checkbox" id="checkIjzer" class="w-4 h-4 accent-cyan-500 rounded bg-slate-950 border-slate-700">Intravenous
+<label class="text-xs font-semibold uppercase text-slate-300">Intraveneus Ijzer (Venofer)</label>
+</div>
+<div class="bg-slate-900 p-3.5 rounded-lg border border-slate-800 flex flex-col gap-2">
+<div class="flex items-center gap-3">
+<input type="checkbox" id="checkShuntflow" onchange="toggleShuntflow()" class="w-4 h-4 accent-cyan-500 rounded bg-slate-950 border-slate-700">
+<label class="text-xs font-semibold uppercase text-slate-300">Shuntflow Meting</label>
+</div>
+<input type="number" id="valShuntflow" placeholder="ml/min" class="hidden w-full bg-slate-950 border border-slate-700 rounded p-1.5 text-xs text-slate-100 font-mono">
+</div>
+</div>
+</section>
+​<!-- BLOK 4: MEDISCH PERSONEEL & RAPPORTAGE -->
+<section class="bg-slate-950 rounded-xl border border-slate-800 p-5 space-y-4 shadow-xl">
+<h2 class="text-sm font-bold uppercase tracking-wider text-cyan-400 border-b border-slate-800 pb-3">
+👩‍⚕️ 4. Verpleegkundige Verantwoordelijkheid & Klinische Notities
+</h2>
+​<div>
+<div class="flex justify-between items-center mb-2">
+<label class="text-xs font-semibold uppercase text-slate-400">Toegewezen Medisch Team / Verpleging</label>
+<button onclick="voegNieuweVerpleging()" class="text-xs bg-slate-800 hover:bg-slate-700 text-cyan-400 font-medium px-2.5 py-1 rounded transition">+ Medewerker toevoegen</button>
+</div>
+<div id="verplegingContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-900 border border-slate-800 p-3 rounded-lg min-h-[50px]"></div>
+</div>
+​<div>
+<label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Klinische Bijzonderheden / Observaties</label>
+<textarea id="bijzonderheden" rows="3" placeholder="Bijv. bloeddrukverloop, punctieproblemen, alarmsituaties..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-100 focus:border-cyan-500 outline-none"></textarea>
+</div>
+</section>
+​<!-- ACTIE KNOPPEN -->
+<div class="flex flex-col sm:flex-row gap-3 pt-4">
+<button onclick="slaDialyseOp(true)" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 px-6 rounded-lg border border-slate-700 transition text-sm uppercase tracking-wider shadow-md">
+Opslaan als Concept
+</button>
+<button onclick="slaDialyseOp(false)" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-extrabold py-3.5 px-6 rounded-lg transition text-sm uppercase tracking-wider shadow-lg shadow-cyan-950/50">
+Klinische Planning / Wijziging Bevestigen
+</button>
+</div>
+</div>
+</main>
+​<!-- JavaScript Logica -->
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxrFTHSIyQSWT1qBEcl6Pv_CM5pr_0Za2qjvsDCZvfWc5p7J51DAuqrSJgV0db5BI-tRQ/exec";
+​let appConfig = { streefgewicht: 109.0, verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
+let gekozenVerpleging = [];
+​window.onload = function() {
+laadConfig();
+bepaalStatus();
+};
+​function toonStatus(bericht, isFout = false) {
+const el = document.getElementById('statusMessage');
+el.innerText = bericht;
+el.className = p-4 rounded-lg text-sm font-medium border transition-all shadow-md ${isFout ? 'bg-rose-950/80 text-rose-300 border-rose-800' : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'};
+el.classList.remove('hidden');
+setTimeout(() => el.classList.add('hidden'), 5000);
+}
+​function laadConfig() {
+fetch(${WEB_APP_URL}?actie=getConfig)
+.then(res => res.json())
+.then(data => {
+if (data && data.streefgewicht) appConfig.streefgewicht = parseFloat(data.streefgewicht);
+if (data && data.verpleging && Array.isArray(data.verpleging)) appConfig.verpleging = data.verpleging;
+​document.getElementById('headerStreefgewicht').innerText = appConfig.streefgewicht.toFixed(1);
+document.getElementById('labelHuidigStreefgewicht').innerText = appConfig.streefgewicht.toFixed(1);
+bouwVerplegingLijst();
+berekenUF();
+})
+.catch(err => {
+console.warn("Kon externe config niet laden, lokaal fallback actief", err);
+bouwVerplegingLijst();
+berekenUF();
+});
+}
+​function bouwVerplegingLijst() {
+const container = document.getElementById('verplegingContainer');
+if (!container) return;
+container.innerHTML = '';
+​appConfig.verpleging.forEach(naam => {
+const isChecked = gekozenVerpleging.includes(naam) ? 'checked' : '';
+container.innerHTML += <label class="flex items-center gap-2.5 p-2 bg-slate-950 border border-slate-800 rounded hover:border-slate-700 cursor-pointer select-none text-xs"> <input type="checkbox" value="${naam}" ${isChecked} onchange="updateVerplegingSelectie(this)" class="w-3.5 h-3.5 accent-cyan-500 rounded bg-slate-900 border-slate-700"> <span class="font-medium text-slate-300">${naam}</span> </label>;
+});
+}
+​function updateVerplegingSelectie(checkbox) {
+const naam = checkbox.value;
+if (checkbox.checked) {
+if (!gekozenVerpleging.includes(naam)) gekozenVerpleging.push(naam);
+} else {
+gekozenVerpleging = gekozenVerpleging.filter(n => n !== naam);
+}
+}
+​function voegNieuweVerpleging() {
+const naam = prompt("Naam nieuwe verpleegkundige / arts:");
+if (!naam || !naam.trim()) return;
+​fetch(WEB_APP_URL, {
+method: 'POST',
+body: JSON.stringify({ actie: 'voegVerplegingToe', waarde: naam.trim() })
+})
+.then(res => res.json())
+.then(res => {
+toonStatus("Medewerker succesvol toegevoegd.");
+laadConfig();
+})
+.catch(err => toonStatus("Fout bij toevoegen medewerker", true));
+}
+​function toggleShuntflow() {
+const chk = document.getElementById('checkShuntflow').checked;
+const inp = document.getElementById('valShuntflow');
+if (chk) inp.classList.remove('hidden');
+else { inp.classList.add('hidden'); inp.value = ''; }
+}
+​function berekenUF() {
+const pre = parseFloat(document.getElementById('pregewicht').value) || 0;
+const post = parseFloat(document.getElementById('postgewicht').value) || 0;
+const streefgewicht = appConfig.streefgewicht || 109.0;
+const type = document.getElementById('typeDialyse').value.toLowerCase();
+const correctie = type.includes('dag') ? 0.6 : 0.3;
+​if (pre > 0 && post > 0) {
+document.getElementById('werkelijkUf').value = (pre - post).toFixed(2) + " kg";
+} else {
+document.getElementById('werkelijkUf').value = "-";
+}
+​const ufBox = document.getElementById('ufAdviesBox');
+const ufRes = document.getElementById('ufAdviesResult');
+​if (pre > 0) {
+const adviesNum = pre - streefgewicht + correctie;
+ufRes.innerText = adviesNum.toFixed(2) + " kg";
+​ufBox.className = "p-4 rounded-lg border flex justify-between items-center transition-all shadow-md";
+if (adviesNum >= 4.5) {
+ufBox.classList.add('bg-rose-950/40', 'border-rose-800');
+ufRes.className = "text-2xl font-extrabold text-rose-400 font-mono mt-0.5";
+} else if (adviesNum >= 4.0) {
+ufBox.classList.add('bg-amber-950/40', 'border-amber-800');
+ufRes.className = "text-2xl font-extrabold text-amber-400 font-mono mt-0.5";
+} else {
+ufBox.classList.add('bg-emerald-950/40', 'border-emerald-800');
+ufRes.className = "text-2xl font-extrabold text-emerald-400 font-mono mt-0.5";
+}
+} else {
+ufRes.innerText = "0.0 kg";
+ufBox.className = "p-4 rounded-lg bg-slate-900 border border-slate-800 flex justify-between items-center transition-all";
+ufRes.className = "text-2xl font-extrabold text-slate-200 font-mono mt-0.5";
+}
+}
+​function bepaalStatus() {
+const start = document.getElementById('start').value;
+const stop = document.getElementById('stop').value;
+const badge = document.getElementById('statusBadgeHeader');
+​if (stop) {
+badge.innerText = "STATUS: AFGEROND";
+badge.className = "text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-md font-semibold tracking-wide";
+} else if (start) {
+badge.innerText = "STATUS: BEHANDELING ACTIEF";
+badge.className = "text-xs bg-amber-950 text-amber-400 border border-amber-800 px-3 py-1 rounded-md font-semibold tracking-wide";
+} else {
+badge.innerText = "STATUS: GEPLAND";
+badge.className = "text-xs bg-cyan-950 text-cyan-400 border border-cyan-800 px-3 py-1 rounded-md font-semibold tracking-wide";
+}
+}
+​function resetFormulier() {
+document.getElementById('bewerkId').value = '';
+document.querySelectorAll('input:not([type=date]), textarea').forEach(el => el.value = '');
+document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+document.getElementById('valShuntflow').classList.add('hidden');
+gekozenVerpleging = [];
+bouwVerplegingLijst();
+berekenUF();
+bepaalStatus();
+toonStatus("Formulier geleegd.");
+}
+​function slaDialyseOp(isConcept) {
+const bestaandId = document.getElementById('bewerkId').value.trim();
+const id = bestaandId !== "" ? bestaandId : ('HD-' + Date.now());
+​const payload = {
+actie: 'slaDialyseOp',
+id: id,
+afspraak: document.getElementById('afspraak').value,
+start: document.getElementById('start').value,
+stop: document.getElementById('stop').value,
+type: document.getElementById('typeDialyse').value,
+herhaling: document.getElementById('herhaling').value,
+eindHerhaling: document.getElementById('eindHerhaling').value,
+pregewicht: document.getElementById('pregewicht').value,
+postgewicht: document.getElementById('postgewicht').value,
+ufAdvies: document.getElementById('ufAdviesResult').innerText,
+gekozenUf: document.getElementById('gekozenUf').value,
+werkelijkUf: document.getElementById('werkelijkUf').value,
+fragmin2500: document.getElementById('checkFragmin2500').checked ? (document.getElementById('valFragmin2500').value || 'Ja') : '',
+fragmin5000: document.getElementById('checkFragmin5000').checked ? (document.getElementById('valFragmin5000').value || 'Ja') : '',
+epo: document.getElementById('checkEpo').checked ? 'Ja' : '',
+ijzer: document.getElementById('checkIjzer').checked ? 'Ja' : '',
+shuntflow: document.getElementById('checkShuntflow').checked ? (document.getElementById('valShuntflow').value || 'Ja') : '',
+verpleging: gekozenVerpleging,
+bijzonderheden: document.getElementById('bijzonderheden').value
+};
+​fetch(WEB_APP_URL, {
+method: 'POST',
+body: JSON.stringify(payload)
+})
+.then(res => res.json())
+.then(res => {
+toonStatus(isConcept ? "Behandeling opgeslagen als concept." : "Klinische planning succesvol opgeslagen.");
+resetFormulier();
+})
+.catch(err => toonStatus("Fout bij synchroniseren met server: " + err, true));
+}
+</script>
 </body>
 </html>
