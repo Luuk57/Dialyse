@@ -151,12 +151,23 @@
             <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
                 <h2 class="text-lg font-bold text-slate-700 border-b pb-2">👩‍⚕️ Verpleging & Notities</h2>
                 
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-semibold uppercase text-slate-500">Verpleging</label>
-                        <button onclick="voegNieuweVerpleging()" class="text-xs bg-sky-100 text-sky-700 font-bold px-2.5 py-1 rounded-lg hover:bg-sky-200 transition">+ Toevoegen</button>
+                <!-- Multi-select Dropdown voor Verpleging -->
+                <div class="relative">
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Verpleging (Meerdere selecties mogelijk)</label>
+                    <div class="flex gap-2">
+                        <div id="verplegingDropdownToggle" onclick="toggleVerplegingDropdown()" class="flex-grow bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm cursor-pointer flex justify-between items-center select-none">
+                            <span id="verplegingGeselecteerdLabel" class="text-slate-600">Selecteer verpleging...</span>
+                            <span class="text-xs text-slate-400">▼</span>
+                        </div>
+                        <button onclick="voegNieuweVerpleging()" class="bg-sky-100 hover:bg-sky-200 text-sky-700 text-xs font-bold px-4 py-2 rounded-xl transition">+ Nieuw</button>
                     </div>
-                    <div id="verplegingKnoppen" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                    
+                    <!-- Uitklapbaar Menu met Checkboxes -->
+                    <div id="verplegingDropdownMenu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 p-3 space-y-2 max-h-48 overflow-y-auto">
+                        <div id="verplegingCheckboxesContainer" class="space-y-1.5">
+                            <!-- Dynamisch gevuld -->
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -230,6 +241,13 @@
 
             laadConfig();
             laadData();
+
+            // Klik buiten dropdown om te sluiten
+            window.onclick = function(event) {
+                if (!event.target.closest('#verplegingDropdownToggle') && !event.target.closest('#verplegingDropdownMenu')) {
+                    document.getElementById('verplegingDropdownMenu').classList.add('hidden');
+                }
+            };
         };
 
         function switchTab(tabId) {
@@ -259,39 +277,56 @@
                     if (data && data.verpleging && Array.isArray(data.verpleging) && data.verpleging.length > 0) {
                         appConfig.verpleging = data.verpleging;
                     }
-                    bouwVerplegingKnoppen();
+                    bouwVerplegingDropdown();
                 })
                 .catch(err => {
                     console.warn("Fout bij config laden, gebruik defaults:", err);
-                    bouwVerplegingKnoppen();
+                    bouwVerplegingDropdown();
                 });
         }
 
-        function bouwVerplegingKnoppen() {
-            const container = document.getElementById('verplegingKnoppen');
+        function toggleVerplegingDropdown() {
+            const menu = document.getElementById('verplegingDropdownMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function bouwVerplegingDropdown() {
+            const container = document.getElementById('verplegingCheckboxesContainer');
             if (!container) return;
             container.innerHTML = '';
             
             const lijst = appConfig.verpleging.length > 0 ? appConfig.verpleging : ['Zuster An', 'Zuster Lisa', 'Broeder Jan'];
 
             lijst.forEach(naam => {
-                const isGeselecteerd = gekozenVerpleging.includes(naam);
-                const cls = isGeselecteerd 
-                            ? "bg-sky-600 text-white border-sky-500 font-bold shadow-sm" 
-                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50";
-                
-                container.innerHTML += `<button type="button" onclick="toggleVerpleging('${naam}', this)" class="p-2.5 rounded-xl border ${cls} text-sm transition text-center">${naam}</button>`;
+                const isChecked = gekozenVerpleging.includes(naam) ? 'checked' : '';
+                container.innerHTML += `
+                    <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-50 cursor-pointer select-none">
+                        <input type="checkbox" value="${naam}" ${isChecked} onchange="updateVerplegingSelectie(this)" class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500">
+                        <span class="text-sm text-slate-700">${naam}</span>
+                    </label>
+                `;
             });
+            updateVerplegingLabel();
         }
 
-        function toggleVerpleging(naam, btn) {
-            const idx = gekozenVerpleging.indexOf(naam);
-            if (idx > -1) {
-                gekozenVerpleging.splice(idx, 1);
-                btn.className = "p-2.5 rounded-xl border bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50 text-sm transition text-center";
+        function updateVerplegingSelectie(checkbox) {
+            const naam = checkbox.value;
+            if (checkbox.checked) {
+                if (!gekozenVerpleging.includes(naam)) gekozenVerpleging.push(naam);
             } else {
-                gekozenVerpleging.push(naam);
-                btn.className = "p-2.5 rounded-xl border bg-sky-600 text-white border-sky-500 font-bold text-sm transition text-center";
+                gekozenVerpleging = gekozenVerpleging.filter(n => n !== naam);
+            }
+            updateVerplegingLabel();
+        }
+
+        function updateVerplegingLabel() {
+            const label = document.getElementById('verplegingGeselecteerdLabel');
+            if (gekozenVerpleging.length === 0) {
+                label.innerText = "Selecteer verpleging...";
+                label.className = "text-slate-400";
+            } else {
+                label.innerText = gekozenVerpleging.join(', ');
+                label.className = "text-slate-800 font-medium";
             }
         }
 
@@ -354,7 +389,7 @@
             document.querySelectorAll('input:not([type=date]), textarea').forEach(el => el.value = '');
             document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
             gekozenVerpleging = [];
-            bouwVerplegingKnoppen();
+            bouwVerplegingDropdown();
             bepaalStatus();
         }
 
@@ -441,7 +476,7 @@
             if (item.shuntflow) { document.getElementById('checkShuntflow').checked = true; document.getElementById('valShuntflow').value = item.shuntflow; document.getElementById('valShuntflow').classList.remove('hidden'); }
 
             gekozenVerpleging = item.verpleging || [];
-            bouwVerplegingKnoppen();
+            bouwVerplegingDropdown();
             berekenUF();
             bepaalStatus();
 
