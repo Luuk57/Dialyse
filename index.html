@@ -406,13 +406,15 @@
         function formatteerDatumWeergave(isoStr) {
             if (!isoStr) return '-';
             let s = String(isoStr).trim();
-            if (s.includes('T')) {
-                let parts = s.split('T');
-                let dParts = parts[0].split('-');
-                let tPart = parts[1].split('.')[0].substring(0, 5);
-                if (dParts.length === 3) {
-                    return `${dParts[2]}-${dParts[1]}-${dParts[0]} ${tPart}`;
-                }
+            let d = new Date(s);
+            if (!isNaN(d.getTime())) {
+                // Correcte lokale weergave zonder UTC verschuiving
+                let dag = String(d.getDate()).padStart(2, '0');
+                let maand = String(d.getMonth() + 1).padStart(2, '0');
+                let jaar = d.getFullYear();
+                let uur = String(d.getHours()).padStart(2, '0');
+                let min = String(d.getMinutes()).padStart(2, '0');
+                return `${dag}-${maand}-${jaar} ${uur}:${min}`;
             }
             return s;
         }
@@ -482,11 +484,12 @@
 
         function formaatVoorInput(str) {
             if (!str) return '';
-            let s = String(str).trim();
-            if (' ' in s && !s.includes('T')) {
-                s = s.replace(' ', 'T');
-            }
-            return s.substring(0, 16);
+            let d = new Date(str);
+            if (isNaN(d.getTime())) return String(str).substring(0, 16);
+            // Omzetten naar lokale ISO notatie voor datetime-local input
+            let tzOffset = d.getTimezoneOffset() * 60000;
+            let localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, 16);
+            return localISOTime;
         }
 
         function bewerkItem(id) {
