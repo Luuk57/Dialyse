@@ -219,10 +219,9 @@
     <script>
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxrFTHSIyQSWT1qBEcl6Pv_CM5pr_0Za2qjvsDCZvfWc5p7J51DAuqrSJgV0db5BI-tRQ/exec";
 
-        let appConfig = { verpleging: [] };
+        let appConfig = { verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
         let gekozenVerpleging = [];
         let alleItems = [];
-        let actiefBezigId = null;
 
         window.onload = function() {
             const vandaag = new Date().toISOString().split('T')[0];
@@ -257,19 +256,30 @@
             fetch(`${WEB_APP_URL}?actie=getConfig`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data && data.verpleging) {
+                    if (data && data.verpleging && Array.isArray(data.verpleging) && data.verpleging.length > 0) {
                         appConfig.verpleging = data.verpleging;
-                        bouwVerplegingKnoppen();
                     }
+                    bouwVerplegingKnoppen();
+                })
+                .catch(err => {
+                    console.warn("Fout bij config laden, gebruik defaults:", err);
+                    bouwVerplegingKnoppen();
                 });
         }
 
         function bouwVerplegingKnoppen() {
             const container = document.getElementById('verplegingKnoppen');
+            if (!container) return;
             container.innerHTML = '';
-            appConfig.verpleging.forEach(naam => {
+            
+            const lijst = appConfig.verpleging.length > 0 ? appConfig.verpleging : ['Zuster An', 'Zuster Lisa', 'Broeder Jan'];
+
+            lijst.forEach(naam => {
                 const isGeselecteerd = gekozenVerpleging.includes(naam);
-                const cls = isGeselecteerd ? "bg-sky-600 text-white border-sky-500 font-bold" : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50";
+                const cls = isGeselecteerd 
+                            ? "bg-sky-600 text-white border-sky-500 font-bold shadow-sm" 
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-sky-50";
+                
                 container.innerHTML += `<button type="button" onclick="toggleVerpleging('${naam}', this)" class="p-2.5 rounded-xl border ${cls} text-sm transition text-center">${naam}</button>`;
             });
         }
@@ -412,7 +422,6 @@
             const item = alleItems.find(i => i.id === id);
             if (!item) return;
 
-            actiefBezigId = item.id;
             document.getElementById('bewerkId').value = item.id;
             document.getElementById('afspraak').value = item.afspraak || '';
             document.getElementById('start').value = item.start || '';
