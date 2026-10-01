@@ -104,9 +104,9 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
+                    <div id="ufAdviesBox" class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center transition-all">
                         <div>
-                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Berekend UF Advies (Pre - Streefgewicht + 0.3)</span>
+                            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Berekend UF Advies (&ge;4.5 Rood, &ge;4.0 Oranje, &lt;4.0 Groen)</span>
                             <div id="ufAdviesResult" class="text-2xl font-extrabold text-slate-700">0.0 kg</div>
                         </div>
                     </div>
@@ -207,7 +207,7 @@
 
         <!-- TAB 4: CONFIGURATIE / STREEFGEWICHT -->
         <div id="section-config" class="tab-content hidden space-y-4">
-            <h2 class="text-lg font-bold text-slate-700">⚙️️ Instellingen & Streefgewicht</h2>
+            <h2 class="text-lg font-bold text-slate-700">⚙ Instellingen & Streefgewicht</h2>
             
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4">
                 <div>
@@ -235,6 +235,7 @@
 
     <!-- JavaScript Logica -->
     <script>
+        // VERVANG HIERONDER JE GOOGLE APPS SCRIPT WEB APP URL
         const WEB_APP_URL = "VERVANG_DIT_MET_JE_GOOGLE_APPS_SCRIPT_URL";
 
         let appConfig = { streefgewicht: 109, verpleging: ['Zuster An', 'Zuster Lisa', 'Broeder Jan', 'Hilda'] };
@@ -367,11 +368,31 @@
             } else {
                 document.getElementById('werkelijkUf').value = "";
             }
+
+            const ufBox = document.getElementById('ufAdviesBox');
+            const ufRes = document.getElementById('ufAdviesResult');
+
             if (pre > 0) {
-                const advies = (pre - streefgewicht + 0.3).toFixed(2);
-                document.getElementById('ufAdviesResult').innerText = advies + " kg";
+                const adviesNum = pre - streefgewicht + 0.3;
+                const adviesStr = adviesNum.toFixed(2) + " kg";
+                ufRes.innerText = adviesStr;
+
+                // Kleurcodering logica: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
+                ufBox.className = "p-4 rounded-xl border flex justify-between items-center transition-all shadow-sm";
+                if (adviesNum >= 4.5) {
+                    ufBox.classList.add('bg-red-50', 'border-red-300');
+                    ufRes.className = "text-2xl font-extrabold text-red-700";
+                } else if (adviesNum >= 4.0) {
+                    ufBox.classList.add('bg-amber-50', 'border-amber-300');
+                    ufRes.className = "text-2xl font-extrabold text-amber-700";
+                } else {
+                    ufBox.classList.add('bg-emerald-50', 'border-emerald-300');
+                    ufRes.className = "text-2xl font-extrabold text-emerald-700";
+                }
             } else {
-                document.getElementById('ufAdviesResult').innerText = "0.0 kg";
+                ufRes.innerText = "0.0 kg";
+                ufBox.className = "p-4 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center transition-all";
+                ufRes.className = "text-2xl font-extrabold text-slate-700";
             }
         }
 
@@ -400,6 +421,7 @@
             document.getElementById('valShuntflow').classList.add('hidden');
             gekozenVerpleging = [];
             bouwVerplegingLijst();
+            berekenUF();
             bepaalStatus();
         }
 
