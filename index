@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Dialyse App</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #334155;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding-top: 70px;
+            padding-bottom: 40px;
+        }
+
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+        }
+        .top-nav span.brand { color: white; font-weight: bold; margin-right: 5px; font-size: 1.1rem; }
+        .nav-btn { background: none; border: none; color: #38bdf8; cursor: pointer; font-weight: 500; font-size: 0.95rem; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
+        .nav-btn:hover { background-color: rgba(56, 189, 248, 0.1); }
+        .nav-btn.active { color: #ffffff; font-weight: 600; background-color: #0369a1; }
+        .sep { color: #64748b; }
+
+        .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        h1 { font-size: 1.8rem; margin-bottom: 5px; color: var(--accent); }
+        .subtitle { color: var(--text-muted); margin-bottom: 25px; font-size: 0.95rem; }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #e2e8f0; }
+
+        input[type="text"], input[type="url"], input[type="date"], input[type="time"], input[type="number"], textarea, select {
+            width: 100%;
+            background-color: #0f172a;
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        select[multiple] {
+            min-height: 120px;
+        }
+        select[multiple] option { padding: 6px 10px; border-radius: 4px; margin-bottom: 2px; }
+        select[multiple] option:checked { background: #0369a1; color: white; }
+
+        textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+
+        .btn {
+            background-color: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn:hover { background-color: #0ea5e9; }
+        .btn-success { background-color: var(--success); color: white; margin-top: 10px; }
+        .btn-success:hover { background-color: #16a34a; }
+
+        .hint { font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+        .selected-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .tag {
+            background-color: #0369a1;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            font-weight: 500;
+        }
+        .success-msg { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .error-msg { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+
+        .calc-box {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .uf-result {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .uf-green { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid var(--success); }
+        .uf-orange { background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid var(--warning); }
+        .uf-red { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid var(--danger); }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <span class="brand">Tasker:</span>
+        <button class="nav-btn active" onclick="switchView('agenda')">📅 Agenda</button>
+        <span class="sep">|</span>
+        <button class="nav-btn" onclick="switchView('gewicht')">⚖ Gewicht</button>
+        <span class="sep">|</span>
+        <button class="nav-btn" onclick="switchView('verpleging')">👩‍⚕️ Verpleging</button>
+        <span class="sep">|</span>
+        <button class="nav-btn" onclick="switchView('extras')">📝 Extra's</button>
+    </div>
+
+    <div class="container">
+        
+        <!-- URL CONFIG -->
+        <div class="card" style="padding: 15px; margin-bottom: 15px;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="scriptUrl" style="font-size: 0.9rem;">Google Apps Script Web App URL (Centraal):</label>
+                <input type="url" id="scriptUrl" placeholder="Plak hier uw Web App URL..." value="https://script.google.com/macros/s/AKfycbxpqcCSET7kZL2HiClZlv7OozJ6ZPWVJQ1cOaap-fyZ_fmBMQMgoWQ3PcdRibFLbPVh/exec">
+            </div>
+        </div>
+
+        <!-- 1. AGENDA VIEW -->
+        <div id="view-agenda" class="view-section active">
+            <h1>Agenda & Afspraken</h1>
+            <p class="subtitle">Beheer uw afspraken en stuur ze door naar de Google Sheet.</p>
+            <div class="card">
+                <form id="agendaForm">
+                    <div class="form-group">
+                        <label for="agendaDatum">Datum / Tijd:</label>
+                        <input type="datetime-local" id="agendaDatum">
+                    </div>
+                    <div class="form-group">
+                        <label for="agendaTitel">Titel / Onderwerp:</label>
+                        <input type="text" id="agendaTitel" placeholder="Bijv. Dialyse sessie of artsenbezoek...">
+                    </div>
+                    <div class="form-group">
+                        <label for="agendaOmschrijving">Omschrijving / Bijzonderheden:</label>
+                        <textarea id="agendaOmschrijving" placeholder="Notities bij deze afspraak..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success" id="saveAgendaBtn">💾 Opslaan in Google Sheet</button>
+                    <div id="statusAgenda" class="status-msg"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. GEWICHT VIEW -->
+        <div id="view-gewicht" class="view-section">
+            <h1>Gewicht & UF Advies</h1>
+            <p class="subtitle">Bereken automatisch uw UF op basis van drooggewicht (109 kg).</p>
+            <div class="card">
+                <form id="gewichtForm">
+                    <div class="form-group">
+                        <label for="gewichtDatum">Datum:</label>
+                        <input type="date" id="gewichtDatum">
+                    </div>
+                    <div class="form-group">
+                        <label for="preGewicht">Pre-gewicht (kg):</label>
+                        <input type="number" step="0.1" id="preGewicht" placeholder="Bijv. 112.5" value="112.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="droogGewicht">Drooggewicht (kg):</label>
+                        <input type="number" step="0.1" id="droogGewicht" value="109">
+                    </div>
+                    
+                    <div class="calc-box">
+                        <div style="font-weight: 600; margin-bottom: 5px;">Berekening: Pre - Droog + 0.3</div>
+                        <div id="ufResultBox" class="uf-result uf-green">UF Advies: --</div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="gewichtStatus">Status / Notitie:</label>
+                        <input type="text" id="gewichtStatus" placeholder="Bijv. Goed verlopen nachtdialyse...">
+                    </div>
+
+                    <button type="submit" class="btn btn-success" id="saveGewichtBtn">💾 Opslaan in Google Sheet</button>
+                    <div id="statusGewicht" class="status-msg"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. VERPLEGING VIEW -->
+        <div id="view-verpleging" class="view-section">
+            <h1>Verpleging & Notities</h1>
+            <p class="subtitle">Selecteer verplegers en voeg overdrachten toe.</p>
+            <div class="card">
+                <form id="verplegingForm">
+                    <div class="form-group">
+                        <label for="nursesSelect">Verplegers (Meerdere selecteerbaar):</label>
+                        <select id="nursesSelect" multiple>
+                            <option value="Jan de Vries">Jan de Vries</option>
+                            <option value="Lisa Bakker">Lisa Bakker</option>
+                            <option value="Mohammed Ali">Mohammed Ali</option>
+                            <option value="Sophie Jansen">Sophie Jansen</option>
+                        </select>
+                        <div class="hint">💡 Tip: Houd Ctrl of Cmd ingedrukt voor meerdere selecties.</div>
+                        <div id="selectedTagsContainer" class="selected-tags"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newNurseInput">Nieuwe verpleger toevoegen:</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="newNurseInput" placeholder="Naam...">
+                            <button type="button" class="btn" id="addNurseBtn" style="width: 140px;">Toevoegen</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notesArea">Notities / Overdracht:</label>
+                        <textarea id="notesArea" placeholder="Typ hier de overdracht..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success" id="saveVerplegingBtn">💾 Opslaan in Google Sheet</button>
+                    <div id="statusVerpleging" class="status-msg"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 4. EXTRAS VIEW -->
+        <div id="view-extras" class="view-section">
+            <h1>Extra's & Vocht Monitor</h1>
+            <p class="subtitle">Extra hulpmiddelen en instellingen voor uw dialyse.</p>
+            <div class="card">
+                <p>Hier kunt u in de toekomst extra modules toevoegen zoals de Vocht Monitor of specifieke bloeddruk en hartslag logboeken met kleurcodering.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Tab Switcher
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('view-' + viewName).classList.add('active');
+            event.target.classList.add('active');
+            localStorage.setItem('tasker_current_view', viewName);
+        }
+
+        // Restore last view and URL on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('tasker_script_url');
+            if (savedUrl) document.getElementById('scriptUrl').value = savedUrl;
+
+            const lastView = localStorage.getItem('tasker_current_view');
+            if (lastView) {
+                const btn = [...document.querySelectorAll('.nav-btn')].find(b => b.getAttribute('onclick').includes(lastView));
+                if (btn) {
+                    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+                    document.getElementById('view-' + lastView).classList.add('active');
+                    btn.classList.add('active');
+                }
+            }
+
+            // Set default date/time fields
+            const now = new Date();
+            document.getElementById('agendaDatum').value = now.toISOString().slice(0, 16);
+            document.getElementById('gewichtDatum').value = now.toISOString().slice(0, 10);
+
+            loadCustomNurses();
+            calculateUF();
+        });
+
+        // Save URL helper
+        function getScriptUrl() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            localStorage.setItem('tasker_script_url', url);
+            return url;
+        }
+
+        // --- GEWICHT & UF CALCULATION ---
+        const preGewichtInput = document.getElementById('preGewicht');
+        const droogGewichtInput = document.getElementById('droogGewicht');
+        const ufResultBox = document.getElementById('ufResultBox');
+
+        [preGewichtInput, droogGewichtInput].forEach(input => {
+            input.addEventListener('input', calculateUF);
+        });
+
+        function calculateUF() {
+            const pre = parseFloat(preGewichtInput.value) || 0;
+            const droog = parseFloat(droogGewichtInput.value) || 109;
+            const uf = pre - droog + 0.3;
+
+            ufResultBox.textContent = `UF Advies: ${uf.toFixed(2)} kg`;
+            ufResultBox.className = 'uf-result';
+
+            // Color coding as requested: >= 4.5 red, >= 4.0 orange, <4.0 green
+            if (uf >= 4.5) {
+                ufResultBox.classList.add('uf-red');
+            } else if (uf >= 4.0) {
+                ufResultBox.classList.add('uf-orange');
+            } else {
+                ufResultBox.classList.add('uf-green');
+            }
+            return uf.toFixed(2);
+        }
+
+        // --- VERPLEGING LOGIC ---
+        const nursesSelect = document.getElementById('nursesSelect');
+        const newNurseInput = document.getElementById('newNurseInput');
+        const addNurseBtn = document.getElementById('addNurseBtn');
+        const selectedTagsContainer = document.getElementById('selectedTagsContainer');
+
+        function loadCustomNurses() {
+            const savedNurses = JSON.parse(localStorage.getItem('tasker_custom_nurses'));
+            if (savedNurses) {
+                savedNurses.forEach(name => {
+                    if (![...nursesSelect.options].some(opt => opt.value === name)) {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        nursesSelect.appendChild(opt);
+                    }
+                });
+            }
+            updateSelectedTags();
+        }
+
+        addNurseBtn.addEventListener('click', () => {
+            const name = newNurseInput.value.trim();
+            if (name !== '') {
+                const exists = [...nursesSelect.options].some(opt => opt.value.toLowerCase() === name.toLowerCase());
+                if (!exists) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    option.selected = true;
+                    nursesSelect.appendChild(option);
+
+                    let customNurses = JSON.parse(localStorage.getItem('tasker_custom_nurses')) || [];
+                    customNurses.push(name);
+                    localStorage.setItem('tasker_custom_nurses', JSON.stringify(customNurses));
+
+                    newNurseInput.value = '';
+                    updateSelectedTags();
+                } else {
+                    alert('Deze verpleger staat al in de lijst.');
+                }
+            }
+        });
+
+        nursesSelect.addEventListener('change', updateSelectedTags);
+
+        function updateSelectedTags() {
+            selectedTagsContainer.innerHTML = '';
+            [...nursesSelect.selectedOptions].forEach(opt => {
+                const tag = document.createElement('span');
+                tag.className = 'tag';
+                tag.innerHTML = `👩‍⚕️ ${opt.text}`;
+                selectedTagsContainer.appendChild(tag);
+            });
+        }
+
+        // --- SUBMIT HANDLERS ---
+        async function sendData(payload, statusElId, btnElId, successText) {
+            const url = getScriptUrl();
+            if (!url) {
+                alert('Vulstublief uw Google Apps Script Web App URL in.');
+                return;
+            }
+
+            const btn = document.getElementById(btnElId);
+            const statusEl = document.getElementById(statusElId);
+            btn.disabled = true;
+            btn.textContent = 'Bezig met opslaan...';
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                statusEl.style.display = 'block';
+                statusEl.className = 'status-msg success-msg';
+                statusEl.textContent = successText;
+            } catch (error) {
+                statusEl.style.display = 'block';
+                statusEl.className = 'status-msg error-msg';
+                statusEl.textContent = 'Fout bij opslaan: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Opslaan in Google Sheet';
+                setTimeout(() => { statusEl.style.display = 'none'; }, 4000);
+            }
+        }
+
+        // Agenda Submit
+        document.getElementById('agendaForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendData({
+                sheet: 'Agenda',
+                datum: document.getElementById('agendaDatum').value,
+                titel: document.getElementById('agendaTitel').value,
+                omschrijving: document.getElementById('agendaOmschrijving').value
+            }, 'statusAgenda', 'saveAgendaBtn', 'Afspraak succesvol opgeslagen in Google Sheet!');
+        });
+
+        // Gewicht Submit
+        document.getElementById('gewichtForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendData({
+                sheet: 'Gewicht',
+                datum: document.getElementById('gewichtDatum').value,
+                preGewicht: preGewichtInput.value,
+                droogGewicht: droogGewichtInput.value,
+                uf: calculateUF(),
+                status: document.getElementById('gewichtStatus').value
+            }, 'statusGewicht', 'saveGewichtBtn', 'Gewicht & UF succesvol opgeslagen in Google Sheet!');
+        });
+
+        // Verpleging Submit
+        document.getElementById('verplegingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const selectedNurses = [...nursesSelect.selectedOptions].map(opt => opt.value).join(', ');
+            sendData({
+                sheet: 'Verpleging',
+                datum: new Date().toLocaleString(),
+                verpleging: selectedNurses,
+                notities: document.getElementById('notesArea').value
+            }, 'statusVerpleging', 'saveVerplegingBtn', 'Verpleging & notities succesvol opgeslagen in Google Sheet!');
+        });
+    </script>
+</body>
+</html>
