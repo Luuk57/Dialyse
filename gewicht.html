@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Gewicht & UF Monitor met Aanpasbaar Drooggewicht</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #0284c7;
+            --primary-hover: #0369a1;
+            --border-color: #cbd5e1;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 950px; margin: 0 auto; }
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
+        .subtitle { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .full-width { grid-column: 1 / -1; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background-color: #fff;
+            color: var(--text-color);
+        }
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #0d9488; }
+        .btn-secondary:hover { background-color: #0f766e; }
+        .btn-danger { background-color: #ef4444; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; }
+        .btn-danger:hover { background-color: #dc2626; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { font-weight: 600; background-color: #f8fafc; }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .badge-green { background-color: #dcfce7; color: #166534; }
+        .badge-orange { background-color: #ffedd5; color: #c2410c; }
+        .badge-red { background-color: #fee2e2; color: #991b1b; }
+        .badge-id { background-color: #fef3c7; color: #b45309; font-family: monospace; font-size: 0.75rem; }
+        .info-box {
+            background-color: #f0f9ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Tasker - Gewicht & UF Monitor</h1>
+    <div class="subtitle">Beheer uw drooggewicht, koppel metingen aan afspraak-ID's en bereken automatisch het UF-advies.</div>
+    
+    <!-- Drooggewicht Instellingen Card -->
+    <div class="card">
+        <h3>Drooggewicht Instelling</h3>
+        <div class="form-grid" style="align-items: end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="currentDryWeight">Huidig Drooggewicht (kg)</label>
+                <input type="number" step="0.1" id="currentDryWeight" value="109.0">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <button type="button" class="btn btn-secondary" onclick="updateDryWeight()">Drooggewicht Opslaan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meting Invoeren Card -->
+    <div class="card">
+        <h3>Gewicht & UF Meting Invoeren</h3>
+        <div class="info-box">
+            Formule UF-advies: <strong>Pre-gewicht - Drooggewicht + 0,3</strong>.<br>
+            Kleurcodes: <span style="color:#166534; font-weight:bold;">Groen</span> (&lt; 4.0), <span style="color:#c2410c; font-weight:bold;">Oranje</span> (&ge; 4.0), <span style="color:#991b1b; font-weight:bold;">Rood</span> (&ge; 4.5).
+        </div>
+        <form id="weightForm" onsubmit="saveWeightEntry(event)">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="linkedAppointmentId">Koppel aan Afspraak (ID)</label>
+                    <select id="linkedAppointmentId" required>
+                        <option value="">-- Kies een dialyse afspraak --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="preWeight">Pre-gewicht (kg)</label>
+                    <input type="number" step="0.1" id="preWeight" placeholder="bijv. 113.5" required oninput="calcPreview()">
+                </div>
+                <div class="form-group">
+                    <label>Automatisch Berekend UF-advies</label>
+                    <div id="ufPreview" style="padding: 10px; font-weight: bold; font-size: 1.1rem; border: 1px solid var(--border-color); border-radius: 8px; background: #f8fafc;">
+                        - kg
+                    </div>
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button type="submit" class="btn" style="width: 100%;">Meting Opslaan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Overzicht Card -->
+    <div class="card">
+        <h3>Opgeslagen Gewicht & UF Overzicht</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Afspraak ID</th>
+                        <th>Datum / Tijd</th>
+                        <th>Pre-gewicht</th>
+                        <th>Drooggewicht</th>
+                        <th>UF-advies</th>
+                        <th>Actie</th>
+                    </tr>
+                </thead>
+                <tbody id="weightTableBody">
+                    <!-- Dynamisch geladen -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDryWeightIntoUI();
+        loadLinkedAppointments();
+        loadWeightEntries();
+    });
+
+    function getDryWeight() {
+        const saved = localStorage.getItem('tasker_dry_weight');
+        return saved ? parseFloat(saved) : 109.0;
+    }
+
+    function loadDryWeightIntoUI() {
+        document.getElementById('currentDryWeight').value = getDryWeight();
+    }
+
+    function updateDryWeight() {
+        const val = parseFloat(document.getElementById('currentDryWeight').value);
+        if (isNaN(val) || val <= 0) {
+            alert("Voer een geldig drooggewicht in.");
+            return;
+        }
+        localStorage.setItem('tasker_dry_weight', val);
+        alert("Drooggewicht succesvol bijgewerkt naar " + val.toFixed(1) + " kg!");
+        calcPreview();
+    }
+
+    function getAppointments() {
+        return JSON.parse(localStorage.getItem('tasker_appointments_v6') || '[]');
+    }
+
+    function getWeightEntries() {
+        return JSON.parse(localStorage.getItem('tasker_weight_entries_v2') || '[]');
+    }
+
+    function getExpandedAppointments() {
+        let baseAppointments = getAppointments();
+        let expanded = [];
+
+        baseAppointments.forEach(app => {
+            if (app.recurrence === 'Geen' || !app.recurrenceEndDate) {
+                expanded.push({
+                    instanceId: app.id,
+                    appDateTime: app.appDateTime,
+                    dialysisType: app.dialysisType
+                });
+                return;
+            }
+
+            const baseAppDate = new Date(app.appDateTime);
+            const endDate = new Date(app.recurrenceEndDate + 'T23:59:59');
+            let currDate = new Date(baseAppDate);
+            let safetyCounter = 0;
+
+            while (currDate <= endDate && safetyCounter < 365) {
+                safetyCounter++;
+                const y = currDate.getFullYear();
+                const m = String(currDate.getMonth() + 1).padStart(2, '0');
+                const d = String(currDate.getDate()).padStart(2, '0');
+                const h = String(baseAppDate.getHours()).padStart(2, '0');
+                const min = String(baseAppDate.getMinutes()).padStart(2, '0');
+                const isoAppT = `${y}-${m}-${d}T${h}:${min}`;
+                const instId = `${app.id}_${y}${m}${d}`;
+
+                const dayOfWeek = currDate.getDay();
+                let includeThisDay = false;
+
+                if (app.recurrence === 'Elke dag') {
+                    includeThisDay = true;
+                } else if (app.recurrence === 'Om de dag') {
+                    const diffDays = Math.round((currDate - baseAppDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays % 2 === 0) includeThisDay = true;
+                } else if (app.recurrence === 'Ma, Wo, Vrij') {
+                    if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) includeThisDay = true;
+                } else if (app.recurrence === 'Di, Do, Za') {
+                    if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6) includeThisDay = true;
+                }
+
+                if (includeThisDay) {
+                    expanded.push({
+                        instanceId: instId,
+                        appDateTime: isoAppT,
+                        dialysisType: app.dialysisType
+                    });
+                }
+                currDate.setDate(currDate.getDate() + 1);
+            }
+        });
+
+        expanded.sort((a, b) => new Date(a.appDateTime) - new Date(b.appDateTime));
+        return expanded;
+    }
+
+    function loadLinkedAppointments() {
+        const select = document.getElementById('linkedAppointmentId');
+        const appointments = getExpandedAppointments();
+        
+        select.innerHTML = '<option value="">-- Kies een dialyse afspraak --</option>';
+        appointments.forEach(app => {
+            const opt = document.createElement('option');
+            opt.value = app.instanceId;
+            opt.textContent = `ID: ${app.instanceId} (${app.appDateTime.replace('T', ' ')} - ${app.dialysisType})`;
+            select.appendChild(opt);
+        });
+    }
+
+    function calcPreview() {
+        const preWeight = parseFloat(document.getElementById('preWeight').value);
+        const previewDiv = document.getElementById('ufPreview');
+        const dryWeight = getDryWeight();
+
+        if (isNaN(preWeight)) {
+            previewDiv.textContent = "- kg";
+            previewDiv.style.backgroundColor = "#f8fafc";
+            return;
+        }
+
+        let uf = preWeight - dryWeight + 0.3;
+        uf = Math.round(uf * 10) / 10;
+
+        let badgeClass = "badge-green";
+        if (uf >= 4.5) {
+            badgeClass = "badge-red";
+        } else if (uf >= 4.0) {
+            badgeClass = "badge-orange";
+        }
+
+        previewDiv.innerHTML = `<span class="badge ${badgeClass}">${uf.toFixed(1)} kg</span>`;
+    }
+
+    function saveWeightEntry(e) {
+        e.preventDefault();
+        const linkedAppointmentId = document.getElementById('linkedAppointmentId').value;
+        const preWeight = parseFloat(document.getElementById('preWeight').value);
+        const dryWeight = getDryWeight();
+
+        if (!linkedAppointmentId || isNaN(preWeight)) return;
+
+        let uf = Math.round((preWeight - dryWeight + 0.3) * 10) / 10;
+
+        const entry = {
+            id: 'w_' + Date.now(),
+            linkedAppointmentId,
+            preWeight,
+            dryWeight,
+            uf,
+            timestamp: new Date().toISOString()
+        };
+
+        let entries = getWeightEntries();
+        entries = entries.filter(item => item.linkedAppointmentId !== linkedAppointmentId);
+        entries.unshift(entry);
+
+        localStorage.setItem('tasker_weight_entries_v2', JSON.stringify(entries));
+
+        alert("Gewicht & UF-advies succesvol opgeslagen en gekoppeld!");
+        document.getElementById('weightForm').reset();
+        document.getElementById('ufPreview').textContent = "- kg";
+        loadWeightEntries();
+    }
+
+    function deleteWeightEntry(id) {
+        if (!confirm("Weet u zeker dat u deze meting wilt verwijderen?")) return;
+        let entries = getWeightEntries().filter(item => item.id !== id);
+        localStorage.setItem('tasker_weight_entries_v2', JSON.stringify(entries));
+        loadWeightEntries();
+    }
+
+    function loadWeightEntries() {
+        const entries = getWeightEntries();
+        const tbody = document.getElementById('weightTableBody');
+        tbody.innerHTML = "";
+
+        if (entries.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">Geen gewichtsmetingen gekoppeld.</td></tr>`;
+            return;
+        }
+
+        entries.forEach(item => {
+            let badgeClass = "badge-green";
+            if (item.uf >= 4.5) {
+                badgeClass = "badge-red";
+            } else if (item.uf >= 4.0) {
+                badgeClass = "badge-orange";
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="badge-id">${item.linkedAppointmentId}</span></td>
+                <td>${new Date(item.timestamp).toLocaleString('nl-NL')}</td>
+                <td><strong>${item.preWeight.toFixed(1)} kg</strong></td>
+                <td>${item.dryWeight.toFixed(1)} kg</td>
+                <td><span class="badge ${badgeClass}">${item.uf.toFixed(1)} kg</span></td>
+                <td><button class="btn-danger" onclick="deleteWeightEntry('${item.id}')">Wis</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+</script>
+</body>
+</html>
