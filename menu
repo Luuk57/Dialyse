@@ -1,7 +1,7 @@
-<!-- Gedeelde Menubalk voor Tasker -->
-<div style="background-color: #1e293b; padding: 12px 20px; margin: -20px -20px 20px -20px; display: flex; gap: 15px; align-items: center;">
-    <span style="color: white; font-weight: bold; margin-right: 10px;">Tasker App:</span>
+<!-- Vaste Menubalk -->
+<div class="top-nav">
+    <span style="color: white; font-weight: bold; margin-right: 5px;">Tasker App:</span>
     <a href="index.html" style="color: #38bdf8; text-decoration: none; font-weight: 500;">📅 Afspraken & Agenda</a>
     <span style="color: #64748b;">|</span>
-    <a href="gewicht.html" style="color: #38bdf8; text-decoration: none; font-weight: 500;">⚖️ Gewicht & UF Monitor</a>
+    <a href="gewicht.html" style="color: #ffffff; text-decoration: none; font-weight: 600;">⚖ Gewicht & UF Monitor</a>
 </div>
