@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Medisch Dagboek & Toevoegen</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #0284c7;
+            --primary-hover: #0369a1;
+            --border-color: #cbd5e1;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+        /* Vaste Menubalk bovenaan */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            flex-wrap: wrap;
+        }
+        .top-nav a {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .top-nav a.active {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 90px 20px 20px 20px; 
+        }
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
+        .subtitle { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background-color: #fff;
+            color: var(--text-color);
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+        .checkbox-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+        .checkbox-row label {
+            margin-bottom: 0;
+            cursor: pointer;
+            flex: 1;
+            font-weight: 600;
+        }
+        .conditional-input {
+            width: 120px !important;
+            display: none;
+        }
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #0d9488; }
+        .btn-secondary:hover { background-color: #0f766e; }
+        .btn-warning { background-color: #f59e0b; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; margin-right: 4px; }
+        .btn-danger { background-color: #ef4444; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { font-weight: 600; background-color: #f8fafc; }
+        .badge-id { background-color: #fef3c7; color: #b45309; font-family: monospace; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px; }
+        .badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+        .badge-yes { background-color: #dcfce7; color: #166534; }
+        .badge-no { background-color: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+<!-- Vaste Menubalk -->
+<div class="top-nav">
+    <span style="color: white; font-weight: bold; margin-right: 5px;">Tasker App:</span>
+    <a href="index.html">📅 Afspraken & Agenda</a>
+    <span style="color: #64748b;">|</span>
+    <a href="gewicht.html">⚖ Gewicht & UF Monitor</a>
+    <span style="color: #64748b;">|</span>
+    <a href="toevoegen.html" class="active">📝 Medicatie & Extra's</a>
+</div>
+
+<div class="container">
+    <h1>Tasker - Medicatie & Extra's</h1>
+    <div class="subtitle">Koppel extra toevoegingen zoals Fragmin, Epo, IJzer en Shuntflow aan uw dialyse afspraken.</div>
+    
+    <!-- Invoer Formulier -->
+    <div class="card">
+        <h3 id="formTitle">Toevoeging Invoeren</h3>
+        <form id="entryForm" onsubmit="saveEntry(event)">
+            <input type="hidden" id="editEntryId" value="">
+            
+            <div class="form-group">
+                <label for="linkedAppointmentId">Koppel aan Afspraak (ID) *</label>
+                <select id="linkedAppointmentId" required>
+                    <option value="">-- Kies een dialyse afspraak --</option>
+                </select>
+            </div>
+
+            <!-- Fragmin 2500 -->
+            <div class="checkbox-row">
+                <input type="checkbox" id="fragmin2500Check" onchange="toggleInput('fragmin2500Check', 'fragmin2500Val')">
+                <label for="fragmin2500Check">Fragmin 2500</label>
+                <input type="number" step="1" id="fragmin2500Val" class="conditional-input" placeholder="Aantal">
+            </div>
+
+            <!-- Fragmin 5000 -->
+            <div class="checkbox-row">
+                <input type="checkbox" id="fragmin5000Check" onchange="toggleInput('fragmin5000Check', 'fragmin5000Val')">
+                <label for="fragmin5000Check">Fragmin 5000</label>
+                <input type="number" step="1" id="fragmin5000Val" class="conditional-input" placeholder="Aantal">
+            </div>
+
+            <!-- Epo -->
+            <div class="form-group">
+                <label for="epoSelect">Epo</label>
+                <select id="epoSelect">
+                    <option value="Nee">Nee</option>
+                    <option value="Ja">Ja</option>
+                </select>
+            </div>
+
+            <!-- IJzer -->
+            <div class="form-group">
+                <label for="ijzerSelect">Ijzer</label>
+                <select id="ijzerSelect">
+                    <option value="Nee">Nee</option>
+                    <option value="Ja">Ja</option>
+                </select>
+            </div>
+
+            <!-- Shuntflow -->
+            <div class="checkbox-row">
+                <input type="checkbox" id="shuntflowCheck" onchange="toggleInput('shuntflowCheck', 'shuntflowVal')">
+                <label for="shuntflowCheck">Shuntflow</label>
+                <input type="number" step="1" id="shuntflowVal" class="conditional-input" placeholder="Waarde">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" id="submitBtn" class="btn" style="flex: 1;">Toevoeging Opslaan</button>
+                <button type="button" id="cancelEditBtn" class="btn btn-secondary" style="display: none;" onclick="resetForm()">Annuleren</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Overzicht -->
+    <div class="card">
+        <h3>Opgeslagen Toevoegingen Overzicht</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Afspraak ID</th>
+                        <th>Fragmin 2500</th>
+                        <th>Fragmin 5000</th>
+                        <th>Epo</th>
+                        <th>Ijzer</th>
+                        <th>Shuntflow</th>
+                        <th>Acties</th>
+                    </tr>
+                </thead>
+                <tbody id="entriesTableBody">
+                    <!-- Dynamisch geladen -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadLinkedAppointments();
+        loadEntries();
+    });
+
+    function toggleInput(checkId, inputId) {
+        const checkbox = document.getElementById(checkId);
+        const inputField = document.getElementById(inputId);
+        if (checkbox.checked) {
+            inputField.style.display = 'block';
+            inputField.required = true;
+        } else {
+            inputField.style.display = 'none';
+            inputField.value = '';
+            inputField.required = false;
+        }
+    }
+
+    function getAppointments() {
+        return JSON.parse(localStorage.getItem('tasker_appointments_v6') || '[]');
+    }
+
+    function getEntries() {
+        return JSON.parse(localStorage.getItem('tasker_extra_entries_v1') || '[]');
+    }
+
+    function getExpandedAppointments() {
+        let baseAppointments = getAppointments();
+        let expanded = [];
+
+        baseAppointments.forEach(app => {
+            if (app.recurrence === 'Geen' || !app.recurrenceEndDate) {
+                expanded.push({
+                    instanceId: app.id,
+                    appDateTime: app.appDateTime,
+                    dialysisType: app.dialysisType
+                });
+                return;
+            }
+
+            const baseAppDate = new Date(app.appDateTime);
+            const endDate = new Date(app.recurrenceEndDate + 'T23:59:59');
+            let currDate = new Date(baseAppDate);
+            let safetyCounter = 0;
+
+            while (currDate <= endDate && safetyCounter < 365) {
+                safetyCounter++;
+                const y = currDate.getFullYear();
+                const m = String(currDate.getMonth() + 1).padStart(2, '0');
+                const d = String(currDate.getDate()).padStart(2, '0');
+                const h = String(baseAppDate.getHours()).padStart(2, '0');
+                const min = String(baseAppDate.getMinutes()).padStart(2, '0');
+                const isoAppT = `${y}-${m}-${d}T${h}:${min}`;
+                const instId = `${app.id}_${y}${m}${d}`;
+
+                const dayOfWeek = currDate.getDay();
+                let includeThisDay = false;
+
+                if (app.recurrence === 'Elke dag') {
+                    includeThisDay = true;
+                } else if (app.recurrence === 'Om de dag') {
+                    const diffDays = Math.round((currDate - baseAppDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays % 2 === 0) includeThisDay = true;
+                } else if (app.recurrence === 'Ma, Wo, Vrij') {
+                    if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) includeThisDay = true;
+                } else if (app.recurrence === 'Di, Do, Za') {
+                    if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6) includeThisDay = true;
+                }
+
+                if (includeThisDay) {
+                    expanded.push({
+                        instanceId: instId,
+                        appDateTime: isoAppT,
+                        dialysisType: app.dialysisType
+                    });
+                }
+                currDate.setDate(currDate.getDate() + 1);
+            }
+        });
+
+        expanded.sort((a, b) => new Date(a.appDateTime) - new Date(b.appDateTime));
+        return expanded;
+    }
+
+    function loadLinkedAppointments() {
+        const select = document.getElementById('linkedAppointmentId');
+        const appointments = getExpandedAppointments();
+        
+        select.innerHTML = '<option value="">-- Kies een dialyse afspraak --</option>';
+        appointments.forEach(app => {
+            const opt = document.createElement('option');
+            opt.value = app.instanceId;
+            opt.textContent = `ID: ${app.instanceId} (${app.appDateTime.replace('T', ' ')} - ${app.dialysisType})`;
+            select.appendChild(opt);
+        });
+    }
+
+    function saveEntry(e) {
+        e.preventDefault();
+        const editId = document.getElementById('editEntryId').value;
+        const linkedAppointmentId = document.getElementById('linkedAppointmentId').value;
+        if (!linkedAppointmentId) return;
+
+        const fragmin2500Checked = document.getElementById('fragmin2500Check').checked;
+        const fragmin2500Val = fragmin2500Checked ? document.getElementById('fragmin2500Val').value : null;
+
+        const fragmin5000Checked = document.getElementById('fragmin5000Check').checked;
+        const fragmin5000Val = fragmin5000Checked ? document.getElementById('fragmin5000Val').value : null;
+
+        const epo = document.getElementById('epoSelect').value;
+        const ijzer = document.getElementById('ijzerSelect').value;
+
+        const shuntflowChecked = document.getElementById('shuntflowCheck').checked;
+        const shuntflowVal = shuntflowChecked ? document.getElementById('shuntflowVal').value : null;
+
+        const entry = {
+            id: editId ? editId : 'ext_' + Date.now(),
+            linkedAppointmentId,
+            fragmin2500: { checked: fragmin2500Checked, value: fragmin2500Val },
+            fragmin5000: { checked: fragmin5000Checked, value: fragmin5000Val },
+            epo,
+            ijzer,
+            shuntflow: { checked: shuntflowChecked, value: shuntflowVal },
+            timestamp: new Date().toISOString()
+        };
+
+        let entries = getEntries();
+        if (editId) {
+            entries = entries.map(item => item.id === editId ? entry : item);
+            alert("Toevoeging succesvol bijgewerkt!");
+        } else {
+            entries = entries.filter(item => item.linkedAppointmentId !== linkedAppointmentId);
+            entries.unshift(entry);
+            alert("Toevoeging succesvol opgeslagen!");
+        }
+
+        localStorage.setItem('tasker_extra_entries_v1', JSON.stringify(entries));
+        resetForm();
+        loadEntries();
+    }
+
+    function editEntry(id) {
+        const entries = getEntries();
+        const entry = entries.find(item => item.id === id);
+        if (!entry) return;
+
+        document.getElementById('editEntryId').value = entry.id;
+        document.getElementById('linkedAppointmentId').value = entry.linkedAppointmentId;
+
+        document.getElementById('fragmin2500Check').checked = entry.fragmin2500.checked;
+        const f25Val = document.getElementById('fragmin2500Val');
+        f25Val.value = entry.fragmin2500.value || '';
+        f25Val.style.display = entry.fragmin2500.checked ? 'block' : 'none';
+        f25Val.required = entry.fragmin2500.checked;
+
+        document.getElementById('fragmin5000Check').checked = entry.fragmin5000.checked;
+        const f50Val = document.getElementById('fragmin5000Val');
+        f50Val.value = entry.fragmin5000.value || '';
+        f50Val.style.display = entry.fragmin5000.checked ? 'block' : 'none';
+        f50Val.required = entry.fragmin5000.checked;
+
+        document.getElementById('epoSelect').value = entry.epo;
+        document.getElementById('ijzerSelect').value = entry.ijzer;
+
+        document.getElementById('shuntflowCheck').checked = entry.shuntflow.checked;
+        const shVal = document.getElementById('shuntflowVal');
+        shVal.value = entry.shuntflow.value || '';
+        shVal.style.display = entry.shuntflow.checked ? 'block' : 'none';
+        shVal.required = entry.shuntflow.checked;
+
+        document.getElementById('formTitle').textContent = "Toevoeging Bewerken";
+        document.getElementById('submitBtn').textContent = "Wijzigingen Opslaan";
+        document.getElementById('cancelEditBtn').style.display = "inline-block";
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('entryForm').reset();
+        document.getElementById('editEntryId').value = "";
+        document.getElementById('fragmin2500Val').style.display = 'none';
+        document.getElementById('fragmin5000Val').style.display = 'none';
+        document.getElementById('shuntflowVal').style.display = 'none';
+        document.getElementById('formTitle').textContent = "Toevoeging Invoeren";
+        document.getElementById('submitBtn').textContent = "Toevoeging Opslaan";
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    function deleteEntry(id) {
+        if (!confirm("Weet u zeker dat u deze toevoeging wilt verwijderen?")) return;
+        let entries = getEntries().filter(item => item.id !== id);
+        localStorage.setItem('tasker_extra_entries_v1', JSON.stringify(entries));
+        loadEntries();
+    }
+
+    function loadEntries() {
+        const entries = getEntries();
+        const tbody = document.getElementById('entriesTableBody');
+        tbody.innerHTML = "";
+
+        if (entries.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#888;">Geen toevoegingen opgeslagen.</td></tr>`;
+            return;
+        }
+
+        entries.forEach(item => {
+            const f25Text = item.fragmin2500.checked ? `Ja (${item.fragmin2500.value})` : '-';
+            const f50Text = item.fragmin5000.checked ? `Ja (${item.fragmin5000.value})` : '-';
+            const epoBadge = `<span class="badge ${item.epo === 'Ja' ? 'badge-yes' : 'badge-no'}">${item.epo}</span>`;
+            const ijzerBadge = `<span class="badge ${item.ijzer === 'Ja' ? 'badge-yes' : 'badge-no'}">${item.ijzer}</span>`;
+            const shuntText = item.shuntflow.checked ? `Ja (${item.shuntflow.value})` : '-';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="badge-id">${item.linkedAppointmentId}</span></td>
+                <td>${f25Text}</td>
+                <td>${f50Text}</td>
+                <td>${epoBadge}</td>
+                <td>${ijzerBadge}</td>
+                <td>${shuntText}</td>
+                <td>
+                    <button class="btn-warning" onclick="editEntry('${item.id}')">Bewerk</button>
+                    <button class="btn-danger" onclick="deleteEntry('${item.id}')">Wis</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+</script>
+</body>
+</html>
