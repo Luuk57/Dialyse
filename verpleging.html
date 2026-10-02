@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Verpleging & Notities</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #334155;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding-top: 80px; /* Ruimte voor vaste menubalk */
+            padding-bottom: 40px;
+        }
+
+        /* Vaste Menubalk bovenaan */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            flex-wrap: wrap;
+        }
+        .top-nav span.brand {
+            color: white; 
+            font-weight: bold; 
+            margin-right: 5px;
+        }
+        .top-nav a {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .top-nav a.active {
+            color: #ffffff;
+            font-weight: 600;
+            border-bottom: 2px solid #38bdf8;
+            padding-bottom: 2px;
+        }
+        .top-nav .sep {
+            color: #64748b;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: var(--accent);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        /* Stijl voor multi-select en invoer */
+        select[multiple] {
+            width: 100%;
+            background-color: #0f172a;
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 1rem;
+            min-height: 120px;
+            box-sizing: border-box;
+        }
+
+        select[multiple] option {
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+        }
+
+        select[multiple] option:checked {
+            background: linear-gradient(0deg, #0284c7 0%, #0369a1 100%);
+            color: white;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .add-nurse-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background-color: #0f172a;
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea {
+            width: 100%;
+            background-color: #0f172a;
+            color: var(--text-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 1rem;
+            min-height: 140px;
+            box-sizing: border-box;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #0ea5e9;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .btn-success:hover {
+            background-color: #16a34a;
+        }
+
+        .selected-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .tag {
+            background-color: #0369a1;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #statusMessage {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            font-weight: 500;
+        }
+        .success-msg { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+    </style>
+</head>
+<body>
+
+    <!-- Vaste Menubalk -->
+    <div class="top-nav">
+        <span class="brand">Tasker App:</span>
+        <a href="index.html">📅 Agenda</a>
+        <span class="sep">|</span>
+        <a href="gewicht.html">⚖ Gewicht</a>
+        <span class="sep">|</span>
+        <a href="verpleging.html" class="active">👩‍⚕️ Verpleging</a>
+        <span class="sep">|</span>
+        <a href="toevoegen.html">📝 Extra's</a>
+    </div>
+
+    <div class="container">
+        <h1>Verpleging & Notities</h1>
+        <p class="subtitle">Selecteer verplegers en voeg notities toe voor uw dienst of overdracht.</p>
+
+        <div class="card">
+            <form id="verplegingForm">
+                
+                <!-- Verpleging Selectie -->
+                <div class="form-group">
+                    <label for="nursesSelect">Verplegers (Meerdere tegelijk te selecteren):</label>
+                    <select id="nursesSelect" multiple>
+                        <option value="Jan de Vries">Jan de Vries</option>
+                        <option value="Lisa Bakker">Lisa Bakker</option>
+                        <option value="Mohammed Ali">Mohammed Ali</option>
+                        <option value="Sophie Jansen">Sophie Jansen</option>
+                    </select>
+                    <div class="hint">💡 Tip: Houd Ctrl (Windows) of Cmd (Mac) ingedrukt om meerdere verplegers te selecteren.</div>
+                    
+                    <div id="selectedTagsContainer" class="selected-tags"></div>
+                </div>
+
+                <!-- Nieuwe verpleger toevoegen -->
+                <div class="form-group">
+                    <label for="newNurseInput">Nieuwe verpleger toevoegen aan lijst:</label>
+                    <div class="add-nurse-box">
+                        <input type="text" id="newNurseInput" placeholder="Naam van verpleger...">
+                        <button type="button" class="btn" id="addNurseBtn">Toevoegen</button>
+                    </div>
+                </div>
+
+                <!-- Notities Veld -->
+                <div class="form-group">
+                    <label for="notesArea">Notities / Overdracht:</label>
+                    <textarea id="notesArea" placeholder="Typ hier uw opmerkingen, bijzonderheden of overdracht voor de verpleging..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success">💾 Opslaan</button>
+                <div id="statusMessage">Gegevens succesvol opgeslagen!</div>
+
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const nursesSelect = document.getElementById('nursesSelect');
+        const newNurseInput = document.getElementById('newNurseInput');
+        const addNurseBtn = document.getElementById('addNurseBtn');
+        const selectedTagsContainer = document.getElementById('selectedTagsContainer');
+        const verplegingForm = document.getElementById('verplegingForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const notesArea = document.getElementById('notesArea');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedNurses = JSON.parse(localStorage.getItem('tasker_custom_nurses'));
+            if (savedNurses && savedNurses.length > 0) {
+                savedNurses.forEach(name => {
+                    if (![...nursesSelect.options].some(opt => opt.value === name)) {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        nursesSelect.appendChild(opt);
+                    }
+                });
+            }
+
+            const savedNotes = localStorage.getItem('tasker_current_notes');
+            if (savedNotes) {
+                notesArea.value = savedNotes;
+            }
+
+            const savedSelected = JSON.parse(localStorage.getItem('tasker_selected_nurses'));
+            if (savedSelected) {
+                [...nursesSelect.options].forEach(opt => {
+                    if (savedSelected.includes(opt.value)) {
+                        opt.selected = true;
+                    }
+                });
+            }
+            updateSelectedTags();
+        });
+
+        addNurseBtn.addEventListener('click', () => {
+            const name = newNurseInput.value.trim();
+            if (name !== '') {
+                const exists = [...nursesSelect.options].some(opt => opt.value.toLowerCase() === name.toLowerCase());
+                if (!exists) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    option.selected = true;
+                    nursesSelect.appendChild(option);
+
+                    let customNurses = JSON.parse(localStorage.getItem('tasker_custom_nurses')) || [];
+                    customNurses.push(name);
+                    localStorage.setItem('tasker_custom_nurses', JSON.stringify(customNurses));
+
+                    newNurseInput.value = '';
+                    updateSelectedTags();
+                } else {
+                    alert('Deze verpleger staat al in de lijst.');
+                }
+            }
+        });
+
+        nursesSelect.addEventListener('change', updateSelectedTags);
+
+        function updateSelectedTags() {
+            selectedTagsContainer.innerHTML = '';
+            const selectedOptions = [...nursesSelect.selectedOptions];
+            selectedOptions.forEach(opt => {
+                const tag = document.createElement('span');
+                tag.className = 'tag';
+                tag.innerHTML = `👩‍⚕️ ${opt.text}`;
+                selectedTagsContainer.appendChild(tag);
+            });
+        }
+
+        verplegingForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const selectedNurses = [...nursesSelect.selectedOptions].map(opt => opt.value);
+            const notes = notesArea.value;
+
+            localStorage.setItem('tasker_selected_nurses', JSON.stringify(selectedNurses));
+            localStorage.setItem('tasker_current_notes', notes);
+
+            statusMessage.style.display = 'block';
+            statusMessage.className = 'success-msg';
+            
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
