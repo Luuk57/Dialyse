@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasker - Dialyse Monitor</title>
+    <title>L. Wagt - Dialyse Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -11,7 +11,7 @@
     <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
             <div class="flex items-center space-x-2">
-                <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-bold text-sm">Tasker</span>
+                <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-bold text-sm">L. Wagt</span>
                 <span class="text-xs font-semibold text-slate-500" id="activeSessionHeader">Geen actieve sessie</span>
             </div>
             <!-- Navigation Tabs -->
@@ -31,28 +31,57 @@
         <!-- TAB 1: AFSPRAKEN -->
         <div id="tab-afspraken" class="tab-content space-y-6">
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="text-lg font-bold text-slate-900 mb-2">Nieuwe Dialyse Sessie Starten</h2>
-                <p class="text-xs text-slate-500 mb-4">Start een nieuwe sessie om gewicht, bloeddruk en opmerkingen direct aan deze afspraak te koppelen.</p>
-                <form onsubmit="startSession(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Datum & Tijd</label>
-                        <input type="datetime-local" id="sessionDate" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                <h2 class="text-lg font-bold text-slate-900 mb-2">Dialyse Afspraken & Planning Invoeren</h2>
+                <p class="text-xs text-slate-500 mb-4">Bij herhaling worden alle afspraken automatisch stuk voor stuk afzonderlijk in de lijst uitgeschreven.</p>
+                <form onsubmit="startSession(event)" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Afspraak Datum/Tijd</label>
+                            <input type="datetime-local" id="sessionAfspraak" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Start Datum/Tijd</label>
+                            <input type="datetime-local" id="sessionStart" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Stop Datum/Tijd</label>
+                            <input type="datetime-local" id="sessionStop" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Type Dialyse</label>
-                        <select id="sessionType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                            <option value="Nachtdialyse">Nachtdialyse</option>
-                            <option value="Dagdialyse">Dagdialyse</option>
-                        </select>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Type Dialyse</label>
+                            <select id="sessionType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                                <option value="Nacht (0,3)">Nacht (0,3)</option>
+                                <option value="Dag (0,6)">Dag (0,6)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Herhaling</label>
+                            <select id="sessionRecurrence" onchange="toggleRecurrenceStop()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                                <option value="geen">Geen</option>
+                                <option value="elke dag">Elke dag</option>
+                                <option value="om de dag">Om de dag</option>
+                                <option value="ma wo vrij">Ma wo vrij</option>
+                                <option value="di do za">Di do za</option>
+                            </select>
+                        </div>
+                        <div id="recurrenceStopContainer" class="hidden">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Stop Datum Herhaling</label>
+                            <input type="date" id="sessionRecurrenceStop" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
+                        </div>
                     </div>
-                    <div class="flex items-end">
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl shadow-md transition">Sessie Aanmaken</button>
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-md transition">Afspraak / Sessie(s) Aanmaken</button>
                     </div>
                 </form>
             </div>
 
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                <h2 class="text-base font-bold text-slate-900 mb-4">Mijn Dialyse Sessies</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-900">Mijn Afzonderlijke Dialyse Sessies</h2>
+                    <button onclick="clearAllSessions()" class="text-xs text-red-600 hover:underline">Alle wissen</button>
+                </div>
                 <div id="sessionsList" class="space-y-3">
                     <!-- Populated via JS -->
                 </div>
@@ -159,18 +188,32 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Init state
-        let sessions = JSON.parse(localStorage.getItem('tasker_sessions')) || [];
-        let activeId = localStorage.getItem('tasker_active_id') || null;
-        let dryWeight = parseFloat(localStorage.getItem('tasker_dry_weight')) || 109.0;
-        let allData = JSON.parse(localStorage.getItem('tasker_data')) || {};
+        let sessions = JSON.parse(localStorage.getItem('lwagt_sessions')) || [];
+        let activeId = localStorage.getItem('lwagt_active_id') || null;
+        let dryWeight = parseFloat(localStorage.getItem('lwagt_dry_weight')) || 109.0;
+        let allData = JSON.parse(localStorage.getItem('lwagt_data')) || {};
 
         document.getElementById('displayDry').innerText = dryWeight.toFixed(1);
         
-        // Set default date-time to now
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('sessionDate').value = now.toISOString().slice(0,16);
+        let nowIso = now.toISOString().slice(0,16);
+        document.getElementById('sessionAfspraak').value = nowIso;
+        document.getElementById('sessionStart').value = nowIso;
+        document.getElementById('sessionStop').value = nowIso;
+
+        function toggleRecurrenceStop() {
+            let rec = document.getElementById('sessionRecurrence').value;
+            let container = document.getElementById('recurrenceStopContainer');
+            if (rec === 'geen') {
+                container.classList.add('hidden');
+            } else {
+                container.classList.remove('hidden');
+                let future = new Date();
+                future.setDate(future.getDate() + 14);
+                document.getElementById('sessionRecurrenceStop').value = future.toISOString().slice(0,10);
+            }
+        }
 
         function updateHeader() {
             if (!activeId) {
@@ -178,7 +221,7 @@
             } else {
                 let s = sessions.find(x => x.id === activeId);
                 if (s) {
-                    document.getElementById('activeSessionHeader').innerText = "Sessie: " + s.date.replace('T', ' ') + " (" + s.type + ")";
+                    document.getElementById('activeSessionHeader').innerText = "Sessie: Afspraak " + s.afspraak.replace('T', ' ') + " (" + s.type + ")";
                 } else {
                     document.getElementById('activeSessionHeader').innerText = "Actief ID: " + activeId;
                 }
@@ -206,16 +249,81 @@
 
         function startSession(e) {
             e.preventDefault();
-            let dateVal = document.getElementById('sessionDate').value;
+            let afspraakVal = document.getElementById('sessionAfspraak').value;
+            let startVal = document.getElementById('sessionStart').value;
+            let stopVal = document.getElementById('sessionStop').value;
             let typeVal = document.getElementById('sessionType').value;
-            let id = 'dialyse_' + Date.now();
+            let recurrenceVal = document.getElementById('sessionRecurrence').value;
+            let stopDateVal = document.getElementById('sessionRecurrenceStop').value;
 
-            let newSession = { id: id, date: dateVal, type: typeVal };
-            sessions.unshift(newSession);
-            localStorage.setItem('tasker_sessions', JSON.stringify(sessions));
+            let afspraakDate = new Date(afspraakVal);
+            let startDate = new Date(startVal);
+            let stopDate = new Date(stopVal);
+            let diffStartAfspraak = startDate.getTime() - afspraakDate.getTime();
+            let diffStopAfspraak = stopDate.getTime() - afspraakDate.getTime();
+
+            let generatedSessions = [];
+
+            if (recurrenceVal === 'geen' || !stopDateVal) {
+                let id = 'dialyse_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                generatedSessions.push({
+                    id: id,
+                    afspraak: afspraakVal,
+                    start: startVal,
+                    stop: stopVal,
+                    type: typeVal
+                });
+            } else {
+                let currentDay = new Date(afspraakVal);
+                let limitDate = new Date(stopDateVal + 'T23:59:59');
+
+                while (currentDay <= limitDate) {
+                    let dayOfWeek = currentDay.getDay(); 
+                    let include = false;
+
+                    if (recurrenceVal === 'elke dag') {
+                        include = true;
+                    } else if (recurrenceVal === 'om de dag') {
+                        include = true; 
+                    } else if (recurrenceVal === 'ma wo vrij') {
+                        if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) include = true;
+                    } else if (recurrenceVal === 'di do za') {
+                        if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6) include = true;
+                    }
+
+                    if (include) {
+                        let aStr = currentDay.toISOString().slice(0,16);
+                        let sTime = new Date(currentDay.getTime() + diffStartAfspraak).toISOString().slice(0,16);
+                        let eTime = new Date(currentDay.getTime() + diffStopAfspraak).toISOString().slice(0,16);
+                        let id = 'dialyse_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+                        generatedSessions.push({
+                            id: id,
+                            afspraak: aStr,
+                            start: sTime,
+                            stop: eTime,
+                            type: typeVal
+                        });
+                    }
+
+                    if (recurrenceVal === 'om de dag') {
+                        currentDay.setDate(currentDay.getDate() + 2);
+                    } else {
+                        currentDay.setDate(currentDay.getDate() + 1);
+                    }
+                }
+            }
+
+            if (generatedSessions.length === 0) {
+                alert("Geen afspraken gegenereerd binnen de opgegeven periode.");
+                return;
+            }
+
+            sessions = generatedSessions.concat(sessions);
+            localStorage.setItem('lwagt_sessions', JSON.stringify(sessions));
             
-            activeId = id;
-            localStorage.setItem('tasker_active_id', activeId);
+            activeId = generatedSessions[0].id;
+            localStorage.setItem('lwagt_active_id', activeId);
 
             updateHeader();
             renderSessions();
@@ -224,32 +332,62 @@
 
         function selectSession(id) {
             activeId = id;
-            localStorage.setItem('tasker_active_id', activeId);
+            localStorage.setItem('lwagt_active_id', activeId);
             updateHeader();
             loadSessionDataIntoForm();
             switchTab('gewicht');
+        }
+
+        function deleteSession(id, e) {
+            e.stopPropagation();
+            if (confirm("Weet je zeker dat je deze sessie wilt verwijderen?")) {
+                sessions = sessions.filter(s => s.id !== id);
+                localStorage.setItem('lwagt_sessions', JSON.stringify(sessions));
+                if (activeId === id) {
+                    activeId = sessions.length > 0 ? sessions[0].id : null;
+                    localStorage.setItem('lwagt_active_id', activeId);
+                }
+                updateHeader();
+                renderSessions();
+            }
+        }
+
+        function clearAllSessions() {
+            if (confirm("Weet je zeker dat je alle sessies wilt wissen?")) {
+                sessions = [];
+                activeId = null;
+                localStorage.removeItem('lwagt_sessions');
+                localStorage.removeItem('lwagt_active_id');
+                updateHeader();
+                renderSessions();
+            }
         }
 
         function renderSessions() {
             let container = document.getElementById('sessionsList');
             container.innerHTML = "";
             if (sessions.length === 0) {
-                container.innerHTML = `<p class="text-slate-400 text-sm">Geen sessies gevonden. Maak hierboven een nieuwe aan.</p>`;
+                container.innerHTML = `<p class="text-slate-400 text-sm">Geen afzonderlijke sessies gevonden. Maak hierboven een nieuwe aan.</p>`;
                 return;
             }
             sessions.forEach(s => {
                 let div = document.createElement('div');
                 div.className = "border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition";
                 if (s.id === activeId) {
-                    div.classList.add('border-emerald-500', 'bg-emerald-50/30');
+                    div.classList.add('border-emerald-500', 'bg-emerald-50/35');
                 }
                 div.innerHTML = `
                     <div>
-                        <div class="font-bold text-slate-900">${s.date.replace('T', ' ')} (${s.type}) ${s.id === activeId ? '<span class="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full ml-2">Actief</span>' : ''}</div>
-                        <div class="text-xs text-slate-500 font-mono">ID: ${s.id}</div>
+                        <div class="font-bold text-slate-900 flex items-center gap-2">
+                            <span>Afspraak: ${s.afspraak.replace('T', ' ')}</span>
+                            <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-normal">${s.type}</span>
+                            ${s.id === activeId ? '<span class="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full">Actief</span>' : ''}
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">Start: ${s.start.replace('T', ' ')} | Stop: ${s.stop.replace('T', ' ')}</div>
                     </div>
                     <div class="flex flex-wrap gap-2 text-xs">
-                        <button onclick="selectSession('${s.id}')" class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition">Openen & Bewerken</button>
+                        <button onclick="selectSession('${s.id}')" class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition">Bewerken</button>
+                        <button onclick="deleteSession('${s.id}', event)" class="bg-red-50 text-red-600 hover:bg-red-100 font-semibold px-2.5 py-1.5 rounded-lg transition">Verwijder</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -260,7 +398,7 @@
             let val = prompt("Streefgewicht (Dry Weight) in kg:", dryWeight);
             if(val && !isNaN(val)) {
                 dryWeight = parseFloat(val);
-                localStorage.setItem('tasker_dry_weight', dryWeight);
+                localStorage.setItem('lwagt_dry_weight', dryWeight);
                 document.getElementById('displayDry').innerText = dryWeight.toFixed(1);
                 calcUF();
             }
@@ -285,7 +423,6 @@
                 return;
             }
             indicator.classList.remove('hidden');
-            // UF advice color coding: >= 4.5 red, >= 4.0 orange, < 4.0 green
             if (gekozen >= 4.5) {
                 indicator.className = "mt-1.5 text-xs font-bold px-2.5 py-1 rounded-md inline-block bg-red-100 text-red-700 border border-red-200";
                 indicator.innerText = "UF >= 4.5 (Rood)";
@@ -308,7 +445,7 @@
 
             if(!allData[activeId]) allData[activeId] = {};
             allData[activeId].gewicht = { preWeight: pre, pastWeight: dryWeight, ufAdvies: ufAdv, gekozenUf: gekozen, werkelijkUf: werkelijk };
-            localStorage.setItem('tasker_data', JSON.stringify(allData));
+            localStorage.setItem('lwagt_data', JSON.stringify(allData));
             alert("Gewicht succesvol opgeslagen!");
         }
 
@@ -321,7 +458,7 @@
                 dia: document.getElementById('bpDia').value,
                 hr: document.getElementById('heartRate').value
             };
-            localStorage.setItem('tasker_data', JSON.stringify(allData));
+            localStorage.setItem('lwagt_data', JSON.stringify(allData));
             alert("Medische gegevens opgeslagen!");
         }
 
@@ -330,7 +467,7 @@
             if (!activeId) { alert("Geen actieve sessie gekozen!"); return; }
             if(!allData[activeId]) allData[activeId] = {};
             allData[activeId].verpleging = { notes: document.getElementById('verplegingNotes').value };
-            localStorage.setItem('tasker_data', JSON.stringify(allData));
+            localStorage.setItem('lwagt_data', JSON.stringify(allData));
             alert("Verpleging notities opgeslagen!");
         }
 
@@ -339,7 +476,7 @@
             if (!activeId) { alert("Geen actieve sessie gekozen!"); return; }
             if(!allData[activeId]) allData[activeId] = {};
             allData[activeId].opmerking = { text: document.getElementById('opmerkingText').value };
-            localStorage.setItem('tasker_data', JSON.stringify(allData));
+            localStorage.setItem('lwagt_data', JSON.stringify(allData));
             alert("Opmerking opgeslagen!");
         }
 
