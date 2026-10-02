@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasker - Uitgeschreven Dialyse Afspraken</title>
+    <title>Tasker - Uitgeschreven Dialyse Afspraken met ID en Bewerken</title>
     <style>
         :root {
             --bg-color: #f4f6f9;
@@ -21,7 +21,7 @@
             margin: 0;
             padding: 20px;
         }
-        .container { max-width: 850px; margin: 0 auto; }
+        .container { max-width: 950px; margin: 0 auto; }
         h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
         .subtitle { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; }
         .card {
@@ -57,6 +57,8 @@
             font-size: 0.95rem;
         }
         .btn:hover { background-color: var(--primary-hover); }
+        .btn-edit { background-color: #0d9488; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; margin-right: 4px; }
+        .btn-edit:hover { background-color: #0f766e; }
         .btn-danger { background-color: #ef4444; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; }
         .btn-danger:hover { background-color: #dc2626; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
@@ -71,6 +73,11 @@
             background-color: #e0f2fe;
             color: #0369a1;
         }
+        .badge-id {
+            background-color: #fef3c7;
+            color: #b45309;
+            font-family: monospace;
+        }
         .badge-instance {
             background-color: #f1f5f9;
             color: #475569;
@@ -80,14 +87,15 @@
 <body>
 <div class="container">
     <h1>Tasker - Uitgeschreven Dialyse Afspraken</h1>
-    <div class="subtitle">Beheer afspraken. Herhalende afspraken worden automatisch stuk voor stuk 1 voor 1 uitgeschreven in het overzicht.</div>
+    <div class="subtitle">Elke regel heeft een uniek ID voor koppelingen en een eigen Bewerk-knop.</div>
     
-    <div class="card">
-        <h3>Nieuwe Afspraak / Reeks Inplannen</h3>
+    <div class="card" id="formCard">
+        <h3 id="formTitle">Nieuwe Afspraak / Reeks Inplannen</h3>
         <form id="appointmentForm" onsubmit="saveAppointment(event)">
+            <input type="hidden" id="editOriginalId" value="">
             <div class="form-grid">
                 <div class="form-group full-width">
-                    <label for="appDateTime">Afspraak Datum & Tijd (Uniek ID)</label>
+                    <label for="appDateTime">Afspraak Datum & Tijd (Wordt gebruikt als basis ID)</label>
                     <input type="datetime-local" id="appDateTime" required>
                 </div>
                 <div class="form-group">
@@ -120,21 +128,25 @@
                     <input type="date" id="recurrenceEndDate">
                 </div>
             </div>
-            <button type="submit" class="btn">Afspraak Opslaan</button>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn" id="submitBtn">Afspraak Opslaan</button>
+                <button type="button" class="btn" style="background-color: #64748b; display: none;" id="cancelBtn" onclick="resetForm()">Annuleren</button>
+            </div>
         </form>
     </div>
 
     <div class="card">
-        <h3>Volledig Uitgeschreven Overzicht (1 voor 1)</h3>
+        <h3>Volledig Uitgeschreven Overzicht (Met IDs & Bewerken)</h3>
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
+                        <th>Uniek ID</th>
                         <th>Datum & Tijd</th>
                         <th>Start & Stop</th>
                         <th>Soort</th>
-                        <th>Status / Reeks</th>
-                        <th>Actie</th>
+                        <th>Status</th>
+                        <th>Acties</th>
                     </tr>
                 </thead>
                 <tbody id="expandedTableBody">
@@ -173,11 +185,12 @@
     });
 
     function getAppointments() {
-        return JSON.parse(localStorage.getItem('tasker_appointments_v5') || '[]');
+        return JSON.parse(localStorage.getItem('tasker_appointments_v6') || '[]');
     }
 
     function saveAppointment(e) {
         e.preventDefault();
+        const editId = document.getElementById('editOriginalId').value;
         const appDateTime = document.getElementById('appDateTime').value;
         const startDateTime = document.getElementById('startDateTime').value;
         const stopDateTime = document.getElementById('stopDateTime').value;
@@ -188,7 +201,7 @@
         const uniqueId = appDateTime.replace(/[-T:]/g, '');
 
         const newAppointment = {
-            id: uniqueId,
+            id: editId ? editId : uniqueId,
             appDateTime,
             startDateTime,
             stopDateTime,
@@ -198,19 +211,59 @@
         };
 
         let list = getAppointments();
+        if (editId) {
+            list = list.filter(item => item.id !== editId);
+        }
         list = list.filter(item => item.id !== uniqueId);
         list.unshift(newAppointment);
         
-        localStorage.setItem('tasker_appointments_v5', JSON.stringify(list));
+        localStorage.setItem('tasker_appointments_v6', JSON.stringify(list));
 
-        alert("Reeks/Afspraak opgeslagen en uitgeschreven!");
+        alert("Afspraak succesvol opgeslagen!");
+        resetForm();
         loadAndExpandAppointments();
     }
 
+    function resetForm() {
+        document.getElementById('appointmentForm').reset();
+        document.getElementById('editOriginalId').value = "";
+        document.getElementById('formTitle').innerText = "Nieuwe Afspraak / Reeks Inplannen";
+        document.getElementById('submitBtn').innerText = "Afspraak Opslaan";
+        document.getElementById('cancelBtn').style.display = "none";
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('appDateTime').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function editAppointment(parentId) {
+        let list = getAppointments();
+        let app = list.find(item => item.id === parentId);
+        if (!app) return;
+
+        document.getElementById('editOriginalId').value = app.id;
+        document.getElementById('appDateTime').value = app.appDateTime;
+        document.getElementById('startDateTime').value = app.startDateTime || '';
+        document.getElementById('stopDateTime').value = app.stopDateTime || '';
+        document.getElementById('dialysisType').value = app.dialysisType;
+        document.getElementById('recurrence').value = app.recurrence;
+        document.getElementById('recurrenceEndDate').value = app.recurrenceEndDate || '';
+
+        document.getElementById('formTitle').innerText = "Afspraak / Reeks Bewerken (ID: " + app.id + ")";
+        document.getElementById('submitBtn').innerText = "Wijzigingen Opslaan";
+        document.getElementById('cancelBtn').style.display = "inline-block";
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function deleteAppointment(id) {
-        if (!confirm("Weet u zeker dat u deze afspraak wilt verwijderen?")) return;
+        if (!confirm("Weet u zeker dat u deze afspraak/reeks wilt verwijderen?")) return;
         let list = getAppointments().filter(item => item.id !== id);
-        localStorage.setItem('tasker_appointments_v5', JSON.stringify(list));
+        localStorage.setItem('tasker_appointments_v6', JSON.stringify(list));
         loadAndExpandAppointments();
     }
 
@@ -310,7 +363,7 @@
         tbody.innerHTML = "";
         
         if (expandedList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Geen afspraken of herhalingen gevonden.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">Geen afspraken of herhalingen gevonden.</td></tr>`;
             return;
         }
 
@@ -325,11 +378,15 @@
             }
 
             tr.innerHTML = `
+                <td><span class="badge badge-id">${item.instanceId}</span></td>
                 <td><strong>${item.appDateTime.replace('T', ' ')}</strong></td>
                 <td>${startStopText}</td>
                 <td><span class="badge">${item.dialysisType}</span></td>
                 <td><span class="badge badge-instance">${item.typeDesc}</span></td>
-                <td><button class="btn-danger" onclick="deleteAppointment('${item.parentId}')">Wis Reeks</button></td>
+                <td>
+                    <button class="btn-edit" onclick="editAppointment('${item.parentId}')">Bewerk</button>
+                    <button class="btn-danger" onclick="deleteAppointment('${item.parentId}')">Wis</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
