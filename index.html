@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasker - Afspraak Dialyse</title>
+    <title>Tasker - Uitgeschreven Dialyse Afspraken</title>
     <style>
         :root {
             --bg-color: #f4f6f9;
@@ -21,7 +21,7 @@
             margin: 0;
             padding: 20px;
         }
-        .container { max-width: 750px; margin: 0 auto; }
+        .container { max-width: 850px; margin: 0 auto; }
         h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
         .subtitle { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; }
         .card {
@@ -57,7 +57,7 @@
             font-size: 0.95rem;
         }
         .btn:hover { background-color: var(--primary-hover); }
-        .btn-danger { background-color: #ef4444; }
+        .btn-danger { background-color: #ef4444; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; }
         .btn-danger:hover { background-color: #dc2626; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -71,19 +71,23 @@
             background-color: #e0f2fe;
             color: #0369a1;
         }
+        .badge-instance {
+            background-color: #f1f5f9;
+            color: #475569;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Tasker - Afspraak Dialyse</h1>
-    <div class="subtitle">Beheer uw dialyse afspraken (start- en stoptijden zijn niet verplicht).</div>
+    <h1>Tasker - Uitgeschreven Dialyse Afspraken</h1>
+    <div class="subtitle">Beheer afspraken. Herhalende afspraken worden automatisch stuk voor stuk 1 voor 1 uitgeschreven in het overzicht.</div>
     
     <div class="card">
-        <h3>Nieuwe Afspraak Inplannen</h3>
+        <h3>Nieuwe Afspraak / Reeks Inplannen</h3>
         <form id="appointmentForm" onsubmit="saveAppointment(event)">
             <div class="form-grid">
                 <div class="form-group full-width">
-                    <label for="appDateTime">Afspraak Datum & Tijd (Vormt uniek ID)</label>
+                    <label for="appDateTime">Afspraak Datum & Tijd (Uniek ID)</label>
                     <input type="datetime-local" id="appDateTime" required>
                 </div>
                 <div class="form-group">
@@ -105,14 +109,14 @@
                     <label for="recurrence">Herhaling</label>
                     <select id="recurrence" required>
                         <option value="Geen">Geen</option>
-                        <option value="Om de dag">Om de dag</option>
                         <option value="Elke dag">Elke dag</option>
+                        <option value="Om de dag">Om de dag</option>
                         <option value="Ma, Wo, Vrij">Ma, Wo, Vrij</option>
                         <option value="Di, Do, Za">Di, Do, Za</option>
                     </select>
                 </div>
                 <div class="form-group full-width">
-                    <label for="recurrenceEndDate">Herhaling Einddatum</label>
+                    <label for="recurrenceEndDate">Herhaling Einddatum (indien herhaling)</label>
                     <input type="date" id="recurrenceEndDate">
                 </div>
             </div>
@@ -121,20 +125,20 @@
     </div>
 
     <div class="card">
-        <h3>Overzicht Geplande Afspraken</h3>
+        <h3>Volledig Uitgeschreven Overzicht (1 voor 1)</h3>
         <div style="overflow-x: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th>ID / Afspraak Tijd</th>
+                        <th>Datum & Tijd</th>
                         <th>Start & Stop</th>
                         <th>Soort</th>
-                        <th>Herhaling & Einddatum</th>
+                        <th>Status / Reeks</th>
                         <th>Actie</th>
                     </tr>
                 </thead>
-                <tbody id="appTableBody">
-                    <!-- Dynamisch -->
+                <tbody id="expandedTableBody">
+                    <!-- Dynamisch uitgeschreven -->
                 </tbody>
             </table>
         </div>
@@ -152,7 +156,6 @@
         
         const currentFormatted = `${year}-${month}-${day}T${hours}:${minutes}`;
         document.getElementById('appDateTime').value = currentFormatted;
-        
         document.getElementById('startDateTime').value = currentFormatted;
         
         const stopDate = new Date(now.getTime() + 8 * 60 * 60 * 1000);
@@ -163,14 +166,14 @@
         const sMinutes = String(stopDate.getMinutes()).padStart(2, '0');
         document.getElementById('stopDateTime').value = `${sYear}-${sMonth}-${sDay}T${sHours}:${sMinutes}`;
 
-        const endDateObj = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const endDateObj = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
         document.getElementById('recurrenceEndDate').value = endDateObj.toISOString().split('T')[0];
 
-        loadAppointments();
+        loadAndExpandAppointments();
     });
 
     function getAppointments() {
-        return JSON.parse(localStorage.getItem('tasker_appointments_v4') || '[]');
+        return JSON.parse(localStorage.getItem('tasker_appointments_v5') || '[]');
     }
 
     function saveAppointment(e) {
@@ -198,53 +201,138 @@
         list = list.filter(item => item.id !== uniqueId);
         list.unshift(newAppointment);
         
-        localStorage.setItem('tasker_appointments_v4', JSON.stringify(list));
+        localStorage.setItem('tasker_appointments_v5', JSON.stringify(list));
 
-        alert("Afspraak opgeslagen! (ID: " + uniqueId + ")");
-        loadAppointments();
-    }
-
-    function loadAppointments() {
-        const list = getAppointments();
-        const tbody = document.getElementById('appTableBody');
-        tbody.innerHTML = "";
-        
-        if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Geen afspraken gevonden.</td></tr>`;
-            return;
-        }
-
-        list.forEach(item => {
-            const tr = document.createElement('tr');
-            let recInfo = item.recurrence;
-            if (item.recurrence !== 'Geen' && item.recurrenceEndDate) {
-                recInfo += `<br><small>t/m ${item.recurrenceEndDate}</small>`;
-            }
-
-            let startStopText = "Niet ingevuld";
-            if (item.startDateTime || item.stopDateTime) {
-                const startStr = item.startDateTime ? item.startDateTime.replace('T', ' ') : '-';
-                const stopStr = item.stopDateTime ? item.stopDateTime.replace('T', ' ') : '-';
-                startStrText = `Start: ${startStr}<br>Stop: ${stopStr}`;
-                startStopText = `Start: ${startStr}<br>Stop: ${stopStr}`;
-            }
-
-            tr.innerHTML = `
-                <td><strong>${item.id}</strong><br><small>${item.appDateTime.replace('T', ' ')}</small></td>
-                <td>${startStopText}</td>
-                <td><span class="badge">${item.dialysisType}</span></td>
-                <td>${recInfo}</td>
-                <td><button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteAppointment('${item.id}')">Wis</button></td>
-            `;
-            tbody.appendChild(tr);
-        });
+        alert("Reeks/Afspraak opgeslagen en uitgeschreven!");
+        loadAndExpandAppointments();
     }
 
     function deleteAppointment(id) {
         if (!confirm("Weet u zeker dat u deze afspraak wilt verwijderen?")) return;
         let list = getAppointments().filter(item => item.id !== id);
-        localStorage.setItem('tasker_appointments_v4', JSON.stringify(list));
-        loadAppointments();
+        localStorage.setItem('tasker_appointments_v5', JSON.stringify(list));
+        loadAndExpandAppointments();
+    }
+
+    function expandRecurrences(baseAppointments) {
+        let expanded = [];
+
+        baseAppointments.forEach(app => {
+            if (app.recurrence === 'Geen' || !app.recurrenceEndDate) {
+                expanded.push({
+                    parentId: app.id,
+                    instanceId: app.id,
+                    appDateTime: app.appDateTime,
+                    startDateTime: app.startDateTime,
+                    stopDateTime: app.stopDateTime,
+                    dialysisType: app.dialysisType,
+                    typeDesc: 'Eenmalig'
+                });
+                return;
+            }
+
+            let durationStartMs = 0;
+            let durationStopMs = 0;
+            const baseAppDate = new Date(app.appDateTime);
+            
+            if (app.startDateTime) {
+                durationStartMs = new Date(app.startDateTime).getTime() - baseAppDate.getTime();
+            }
+            if (app.stopDateTime) {
+                durationStopMs = new Date(app.stopDateTime).getTime() - baseAppDate.getTime();
+            }
+
+            const endDate = new Date(app.recurrenceEndDate + 'T23:59:59');
+            let currDate = new Date(baseAppDate);
+
+            let safetyCounter = 0;
+            while (currDate <= endDate && safetyCounter < 365) {
+                safetyCounter++;
+
+                const y = currDate.getFullYear();
+                const m = String(currDate.getMonth() + 1).padStart(2, '0');
+                const d = String(currDate.getDate()).padStart(2, '0');
+                const h = String(baseAppDate.getHours()).padStart(2, '0');
+                const min = String(baseAppDate.getMinutes()).padStart(2, '0');
+                const isoAppT = `${y}-${m}-${d}T${h}:${min}`;
+                const instId = `${app.id}_${y}${m}${d}`;
+
+                let instStart = '';
+                let instStop = '';
+
+                if (app.startDateTime) {
+                    const stDate = new Date(currDate.getTime() + durationStartMs);
+                    instStart = stDate.toISOString().slice(0, 16);
+                }
+                if (app.stopDateTime) {
+                    const spDate = new Date(currDate.getTime() + durationStopMs);
+                    instStop = spDate.toISOString().slice(0, 16);
+                }
+
+                const dayOfWeek = currDate.getDay();
+                let includeThisDay = false;
+
+                if (app.recurrence === 'Elke dag') {
+                    includeThisDay = true;
+                } else if (app.recurrence === 'Om de dag') {
+                    const diffDays = Math.round((currDate - baseAppDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays % 2 === 0) includeThisDay = true;
+                } else if (app.recurrence === 'Ma, Wo, Vrij') {
+                    if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) includeThisDay = true;
+                } else if (app.recurrence === 'Di, Do, Za') {
+                    if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6) includeThisDay = true;
+                }
+
+                if (includeThisDay) {
+                    expanded.push({
+                        parentId: app.id,
+                        instanceId: instId,
+                        appDateTime: isoAppT,
+                        startDateTime: instStart,
+                        stopDateTime: instStop,
+                        dialysisType: app.dialysisType,
+                        typeDesc: `Herhaling (${app.recurrence})`
+                    });
+                }
+
+                currDate.setDate(currDate.getDate() + 1);
+            }
+        });
+
+        expanded.sort((a, b) => new Date(a.appDateTime) - new Date(b.appDateTime));
+        return expanded;
+    }
+
+    function loadAndExpandAppointments() {
+        const rawList = getAppointments();
+        const expandedList = expandRecurrences(rawList);
+        const tbody = document.getElementById('expandedTableBody');
+        tbody.innerHTML = "";
+        
+        if (expandedList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">Geen afspraken of herhalingen gevonden.</td></tr>`;
+            return;
+        }
+
+        expandedList.forEach(item => {
+            const tr = document.createElement('tr');
+
+            let startStopText = "Niet ingevuld";
+            if (item.startDateTime || item.stopDateTime) {
+                const startStr = item.startDateTime ? item.startDateTime.replace('T', ' ') : '-';
+                const stopStr = item.stopDateTime ? item.stopDateTime.replace('T', ' ') : '-';
+                startStopText = `Start: ${startStr}<br>Stop: ${stopStr}`;
+            }
+
+            tr.innerHTML = `
+                <td><strong>${item.appDateTime.replace('T', ' ')}</strong></td>
+                <td>${startStopText}</td>
+                <td><span class="badge">${item.dialysisType}</span></td>
+                <td><span class="badge badge-instance">${item.typeDesc}</span></td>
+                <td><button class="btn-danger" onclick="deleteAppointment('${item.parentId}')">Wis Reeks</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 </script>
 </body>
