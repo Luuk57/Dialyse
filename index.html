@@ -3,515 +3,522 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>L. Wagt - Dialyse Monitor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Tasker - Dialyse & Vocht Monitor</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #0284c7;
+            --primary-hover: #0369a1;
+            --border-color: #cbd5e1;
+            --input-bg: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --primary-color: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --border-color: #475569;
+            --input-bg: #0f172a;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #64748b;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .badge-green { background-color: #d1fae5; color: #065f46; }
+        .badge-orange { background-color: #ffedd5; color: #9a3412; }
+        .badge-red { background-color: #fee2e2; color: #991b1b; }
+
+        .calc-result {
+            background: rgba(0,0,0,0.03);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
-    <!-- Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
-            <div class="flex items-center space-x-2">
-                <span class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-bold text-sm">L. Wagt</span>
-                <span class="text-xs font-semibold text-slate-500" id="activeSessionHeader">Geen actieve sessie</span>
-            </div>
-            <!-- Navigation Tabs -->
-            <div class="flex items-center gap-1 text-xs sm:text-sm font-medium overflow-x-auto py-1">
-                <button onclick="switchTab('afspraken')" id="btn-afspraken" class="tab-btn px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold transition">Afspraken</button>
-                <button onclick="switchTab('gewicht')" id="btn-gewicht" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">Gewicht & UF</button>
-                <button onclick="switchTab('medisch')" id="btn-medisch" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">Medisch</button>
-                <button onclick="switchTab('verpleging')" id="btn-verpleging" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">Verpleging</button>
-                <button onclick="switchTab('opmerking')" id="btn-opmerking" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">Opmerking</button>
-            </div>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Tasker - Dialyse & Vocht Monitor</h1>
+        <div>
+            <button class="btn btn-secondary" onclick="toggleDarkMode()">🌙 Thema</button>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-4xl mx-auto px-4 py-6 flex-grow w-full">
+    <!-- Google Sheets Koppeling Configuratie -->
+    <div class="card">
+        <h3>Google Sheets Instellingen (Automatische Koppeling)</h3>
+        <p style="font-size: 0.9rem; margin-top:0;">Plak hieronder de Web App URL van uw Google Apps Script om data automatisch online op te slaan en in te laden.</p>
+        <div class="form-grid">
+            <div class="form-group full-width">
+                <label for="scriptUrl">Google Apps Script Web App URL:</label>
+                <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+        </div>
+        <button class="btn" onclick="saveScriptUrl()">URL Opslaan</button>
+        <button class="btn btn-secondary" onclick="syncWithGoogleSheet()">☁️ Nu Synchroniseren</button>
+        <div id="syncStatus" class="status-msg"></div>
+    </div>
+
+    <!-- Invoer Formulier -->
+    <div class="card">
+        <h3>Nieuwe Sessie Invoeren</h3>
+        <form id="dialysisForm" onsubmit="handleFormSubmit(event)">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="startDate">Startdatum (Nachtdialyse)</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">Einddatum (Nachtdialyse)</label>
+                    <input type="date" id="endDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="preWeight">Pre-gewicht (kg)</label>
+                    <input type="number" step="0.1" id="preWeight" value="112.5" oninput="calculateUF()" required>
+                </div>
+                <div class="form-group">
+                    <label for="dryWeight">Droog gewicht (kg)</label>
+                    <input type="number" step="0.1" id="dryWeight" value="109.0" oninput="calculateUF()" required>
+                </div>
+                <div class="form-group full-width">
+                    <div class="calc-result">
+                        <strong>Berekende UF advies:</strong> <span id="ufResult">-</span> L 
+                        <span id="ufBadge" class="badge"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bloodPressure">Bloeddruk (bijv. 130/80)</label>
+                    <input type="text" id="bloodPressure" placeholder="120/80" oninput="checkBP(this.value)">
+                    <div id="bpStatus" style="margin-top:5px;"></div>
+                </div>
+                <div class="form-group">
+                    <label for="heartRate">Hartslag (slagen/min)</label>
+                    <input type="number" id="heartRate" placeholder="72" oninput="checkHR(this.value)">
+                    <div id="hrStatus" style="margin-top:5px;"></div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="notes">Notities / Bijzonderheden</label>
+                    <textarea id="notes" rows="2" placeholder="Eventuele klachten of opmerkingen..."></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn">Sessie Opslaan (Lokaal + Google Sheet)</button>
+        </form>
+    </div>
+
+    <!-- Opgeslagen Sessies Overzicht -->
+    <div class="card">
+        <h3>Opgeslagen Sessies</h3>
+        <div style="overflow-x: auto;">
+            <table id="sessionsTable">
+                <thead>
+                    <tr>
+                        <th>Datums</th>
+                        <th>Pre / Droog</th>
+                        <th>UF Advies</th>
+                        <th>BP / HR</th>
+                        <th>Notities</th>
+                        <th>Actie</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionsTableBody">
+                    <!-- Dynamisch gevuld -->
+                </tbody>
+            </table>
+        </div>
+        <div class="actions-bar">
+            <button class="btn btn-secondary" onclick="exportToCSV()">Exporteer naar CSV (Excel)</button>
+            <button class="btn btn-secondary" onclick="clearLocalData()" style="background-color: #ef4444;">Wis Lokale Data</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('endDate').value = today;
         
-        <!-- TAB 1: AFSPRAKEN -->
-        <div id="tab-afspraken" class="tab-content space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="text-lg font-bold text-slate-900 mb-2">Dialyse Afspraken & Planning Invoeren</h2>
-                <p class="text-xs text-slate-500 mb-4">Geen enkele velden zijn verplicht. Vul in wat u wilt vastleggen.</p>
-                <form onsubmit="startSession(event)" class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Afspraak Datum/Tijd</label>
-                            <input type="datetime-local" id="sessionAfspraak" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Start Datum/Tijd</label>
-                            <input type="datetime-local" id="sessionStart" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Stop Datum/Tijd</label>
-                            <input type="datetime-local" id="sessionStop" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Type Dialyse</label>
-                            <select id="sessionType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                                <option value="Nacht (0,3)">Nacht (0,3)</option>
-                                <option value="Dag (0,6)">Dag (0,6)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Herhaling</label>
-                            <select id="sessionRecurrence" onchange="toggleRecurrenceStop()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                                <option value="geen">Geen</option>
-                                <option value="elke dag">Elke dag</option>
-                                <option value="om de dag">Om de dag</option>
-                                <option value="ma wo vrij">Ma wo vrij</option>
-                                <option value="di do za">Di do za</option>
-                            </select>
-                        </div>
-                        <div id="recurrenceStopContainer" class="hidden">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Stop Datum Herhaling</label>
-                            <input type="date" id="sessionRecurrenceStop" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900">
-                        </div>
-                    </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-md transition">Afspraak / Sessie(s) Aanmaken</button>
-                    </div>
-                </form>
-            </div>
+        const savedUrl = localStorage.getItem('tasker_script_url');
+        if (savedUrl) {
+            document.getElementById('scriptUrl').value = savedUrl;
+        }
 
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-base font-bold text-slate-900">Mijn Afzonderlijke Dialyse Sessies</h2>
-                    <button onclick="clearAllSessions()" class="text-xs text-red-600 hover:underline">Alle wissen</button>
-                </div>
-                <div id="sessionsList" class="space-y-3">
-                    <!-- Populated via JS -->
-                </div>
-            </div>
-        </div>
+        loadSessions();
+        calculateUF();
+    });
 
-        <!-- TAB 2: GEWICHT & UF -->
-        <div id="tab-gewicht" class="tab-content hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
-                    <h2 class="text-lg font-bold text-slate-900">Gewicht & Ultrafiltratie (UF)</h2>
-                    <button onclick="editDryWeight()" class="text-emerald-600 hover:text-emerald-700 text-xs font-semibold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">Streefgewicht: <span id="displayDry">109.0</span> kg (Wijzig)</button>
-                </div>
-                <form onsubmit="saveGewicht(event)" class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Pre Gewicht (kg)</label>
-                            <input type="number" step="0.1" id="preWeight" oninput="calcUF()" placeholder="113.5" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Streefgewicht (Dry) (kg)</label>
-                            <input type="number" step="0.1" id="pastWeight" oninput="calcUF()" placeholder="109.0" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">UF Advies (l) [Formule]</label>
-                            <input type="text" id="ufAdvies" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-800">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Gekozen UF (l)</label>
-                            <input type="number" step="0.1" id="gekozenUf" oninput="checkUfColor()" placeholder="4.2" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                            <div id="ufIndicator" class="mt-1.5 text-xs font-semibold px-2.5 py-1 rounded-md inline-block hidden">Kleurcodering UF</div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Werkelijk UF (l)</label>
-                            <input type="number" step="0.1" id="werkelijkUf" placeholder="4.1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                        </div>
-                    </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-md transition">Opslaan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
 
-        <!-- TAB 3: MEDISCH -->
-        <div id="tab-medisch" class="tab-content hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="text-lg font-bold text-slate-900 mb-4">Medische Gegevens (Bloeddruk & Hartslag)</h2>
-                <form onsubmit="saveMedisch(event)" class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Bovendruk (mmHg)</label>
-                            <input type="number" id="bpSys" placeholder="120" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Onderdruk (mmHg)</label>
-                            <input type="number" id="bpDia" placeholder="80" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Hartslag (bpm)</label>
-                            <input type="number" id="heartRate" placeholder="72" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5">
-                        </div>
-                    </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-md transition">Opslaan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+    function saveScriptUrl() {
+        const url = document.getElementById('scriptUrl').value.trim();
+        localStorage.setItem('tasker_script_url', url);
+        document.getElementById('syncStatus').innerText = "Script URL opgeslagen!";
+        document.getElementById('syncStatus').style.color = "#10b981";
+    }
 
-        <!-- TAB 4: VERPLEGING -->
-        <div id="tab-verpleging" class="tab-content hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="text-lg font-bold text-slate-900 mb-4">Verpleging Notities & Acties</h2>
-                <form onsubmit="saveVerpleging(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Verpleging Notities</label>
-                        <textarea id="verplegingNotes" rows="4" placeholder="Bijv. priklocatie, heparinering, bijzonderheden..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3.5"></textarea>
-                    </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-md transition">Opslaan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- TAB 5: OPMERKING -->
-        <div id="tab-opmerking" class="tab-content hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="text-lg font-bold text-slate-900 mb-4">Algemene Opmerkingen & Klachten</h2>
-                <form onsubmit="saveOpmerking(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Opmerkingen (bijv. moeheid door nachtdialyse, krampen)</label>
-                        <textarea id="opmerkingText" rows="4" placeholder="Bijv. erg moe, nachtdialyse goed verlopen..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3.5"></textarea>
-                    </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-md transition">Opslaan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- JavaScript Logic -->
-    <script>
-        let sessions = JSON.parse(localStorage.getItem('lwagt_sessions')) || [];
-        let activeId = localStorage.getItem('lwagt_active_id') || null;
-        let dryWeight = parseFloat(localStorage.getItem('lwagt_dry_weight')) || 109.0;
-        let allData = JSON.parse(localStorage.getItem('lwagt_data')) || {};
-
-        document.getElementById('displayDry').innerText = dryWeight.toFixed(1);
+    function calculateUF() {
+        const pre = parseFloat(document.getElementById('preWeight').value) || 0;
+        const dry = parseFloat(document.getElementById('dryWeight').value) || 109.0;
         
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        let nowIso = now.toISOString().slice(0,16);
-        document.getElementById('sessionAfspraak').value = nowIso;
-        document.getElementById('sessionStart').value = nowIso;
-        document.getElementById('sessionStop').value = nowIso;
+        const uf = pre - dry + 0.3;
+        const ufFixed = uf > 0 ? uf.toFixed(1) : "0.0";
+        
+        document.getElementById('ufResult').innerText = ufFixed;
 
-        function toggleRecurrenceStop() {
-            let rec = document.getElementById('sessionRecurrence').value;
-            let container = document.getElementById('recurrenceStopContainer');
-            if (rec === 'geen') {
-                container.classList.add('hidden');
-            } else {
-                container.classList.remove('hidden');
-                let future = new Date();
-                future.setDate(future.getDate() + 14);
-                document.getElementById('sessionRecurrenceStop').value = future.toISOString().slice(0,10);
-            }
+        const badge = document.getElementById('ufBadge');
+        badge.className = "badge";
+        if (uf >= 4.5) {
+            badge.innerText = "Hoog risico (>= 4.5L)";
+            badge.classList.add("badge-red");
+        } else if (uf >= 4.0) {
+            badge.innerText = "Let op (>= 4.0L)";
+            badge.classList.add("badge-orange");
+        } else {
+            badge.innerText = "Goed (< 4.0L)";
+            badge.classList.add("badge-green");
         }
+    }
 
-        function updateHeader() {
-            if (!activeId) {
-                document.getElementById('activeSessionHeader').innerText = "Geen actieve sessie (Kies bij Afspraken)";
-            } else {
-                let s = sessions.find(x => x.id === activeId);
-                if (s) {
-                    document.getElementById('activeSessionHeader').innerText = "Sessie: Afspraak " + (s.afspraak ? s.afspraak.replace('T', ' ') : 'Geen tijd') + " (" + s.type + ")";
-                } else {
-                    document.getElementById('activeSessionHeader').innerText = "Actief ID: " + activeId;
-                }
-            }
-        }
-        updateHeader();
-        renderSessions();
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('bg-emerald-50', 'text-emerald-700', 'font-bold');
-                el.classList.add('text-slate-600', 'hover:bg-slate-100');
-            });
-
-            document.getElementById('tab-' + tabName).classList.remove('hidden');
-            let btn = document.getElementById('btn-' + tabName);
-            btn.classList.remove('text-slate-600', 'hover:bg-slate-100');
-            btn.classList.add('bg-emerald-50', 'text-emerald-700', 'font-bold');
-
-            if (activeId && allData[activeId]) {
-                loadSessionDataIntoForm();
-            }
-        }
-
-        function startSession(e) {
-            e.preventDefault();
-            let afspraakVal = document.getElementById('sessionAfspraak').value;
-            let startVal = document.getElementById('sessionStart').value;
-            let stopVal = document.getElementById('sessionStop').value;
-            let typeVal = document.getElementById('sessionType').value;
-            let recurrenceVal = document.getElementById('sessionRecurrence').value;
-            let stopDateVal = document.getElementById('sessionRecurrenceStop').value;
-
-            let generatedSessions = [];
-
-            if (recurrenceVal === 'geen' || !stopDateVal || !afspraakVal) {
-                let id = 'dialyse_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                generatedSessions.push({
-                    id: id,
-                    afspraak: afspraakVal || 'Onbekende tijd',
-                    start: startVal,
-                    stop: stopVal,
-                    type: typeVal
-                });
-            } else {
-                let currentDay = new Date(afspraakVal);
-                let limitDate = new Date(stopDateVal + 'T23:59:59');
-                let afspraakDate = new Date(afspraakVal);
-                let startDate = startVal ? new Date(startVal) : null;
-                let stopDate = stopVal ? new Date(stopVal) : null;
-                let diffStartAfspraak = startDate ? startDate.getTime() - afspraakDate.getTime() : 0;
-                let diffStopAfspraak = stopDate ? stopDate.getTime() - afspraakDate.getTime() : 0;
-
-                while (currentDay <= limitDate) {
-                    let dayOfWeek = currentDay.getDay(); 
-                    let include = false;
-
-                    if (recurrenceVal === 'elke dag') {
-                        include = true;
-                    } else if (recurrenceVal === 'om de dag') {
-                        include = true; 
-                    } else if (recurrenceVal === 'ma wo vrij') {
-                        if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) include = true;
-                    } else if (recurrenceVal === 'di do za') {
-                        if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6) include = true;
-                    }
-
-                    if (include) {
-                        let aStr = currentDay.toISOString().slice(0,16);
-                        let sTime = startDate ? new Date(currentDay.getTime() + diffStartAfspraak).toISOString().slice(0,16) : '';
-                        let eTime = stopDate ? new Date(currentDay.getTime() + diffStopAfspraak).toISOString().slice(0,16) : '';
-                        let id = 'dialyse_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-
-                        generatedSessions.push({
-                            id: id,
-                            afspraak: aStr,
-                            start: sTime,
-                            stop: eTime,
-                            type: typeVal
-                        });
-                    }
-
-                    if (recurrenceVal === 'om de dag') {
-                        currentDay.setDate(currentDay.getDate() + 2);
-                    } else {
-                        currentDay.setDate(currentDay.getDate() + 1);
-                    }
-                }
-            }
-
-            if (generatedSessions.length === 0) {
-                let id = 'dialyse_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                generatedSessions.push({
-                    id: id,
-                    afspraak: afspraakVal || 'Onbekende tijd',
-                    start: startVal,
-                    stop: stopVal,
-                    type: typeVal
-                });
-            }
-
-            sessions = generatedSessions.concat(sessions);
-            localStorage.setItem('lwagt_sessions', JSON.stringify(sessions));
-            
-            activeId = generatedSessions[0].id;
-            localStorage.setItem('lwagt_active_id', activeId);
-
-            updateHeader();
-            renderSessions();
-            switchTab('gewicht');
-        }
-
-        function selectSession(id) {
-            activeId = id;
-            localStorage.setItem('lwagt_active_id', activeId);
-            updateHeader();
-            loadSessionDataIntoForm();
-            switchTab('gewicht');
-        }
-
-        function deleteSession(id, e) {
-            e.stopPropagation();
-            if (confirm("Weet je zeker dat je deze sessie wilt verwijderen?")) {
-                sessions = sessions.filter(s => s.id !== id);
-                localStorage.setItem('lwagt_sessions', JSON.stringify(sessions));
-                if (activeId === id) {
-                    activeId = sessions.length > 0 ? sessions[0].id : null;
-                    localStorage.setItem('lwagt_active_id', activeId);
-                }
-                updateHeader();
-                renderSessions();
-            }
-        }
-
-        function clearAllSessions() {
-            if (confirm("Weet je zeker dat je alle sessies wilt wissen?")) {
-                sessions = [];
-                activeId = null;
-                localStorage.removeItem('lwagt_sessions');
-                localStorage.removeItem('lwagt_active_id');
-                updateHeader();
-                renderSessions();
-            }
-        }
-
-        function renderSessions() {
-            let container = document.getElementById('sessionsList');
+    function checkBP(val) {
+        const container = document.getElementById('bpStatus');
+        if (!val.includes('/')) {
             container.innerHTML = "";
-            if (sessions.length === 0) {
-                container.innerHTML = `<p class="text-slate-400 text-sm">Geen afzonderlijke sessies gevonden. Maak hierboven een nieuwe aan.</p>`;
-                return;
-            }
-            sessions.forEach(s => {
-                let div = document.createElement('div');
-                div.className = "border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition";
-                if (s.id === activeId) {
-                    div.classList.add('border-emerald-500', 'bg-emerald-50/35');
-                }
-                let afspraakTxt = s.afspraak.includes('T') ? s.afspraak.replace('T', ' ') : s.afspraak;
-                let startTxt = s.start ? (s.start.includes('T') ? s.start.replace('T', ' ') : s.start) : 'Niet ingevuld';
-                let stopTxt = s.stop ? (s.stop.includes('T') ? s.stop.replace('T', ' ') : s.stop) : 'Niet ingevuld';
+            return;
+        }
+        const parts = val.split('/');
+        const sys = parseInt(parts[0]);
+        const dia = parseInt(parts[1]);
+        
+        let badgeClass = "badge-green";
+        let text = "Normaal";
+        
+        if (sys >= 140 || dia >= 90) {
+            badgeClass = "badge-red";
+            text = "Verhoogd";
+        } else if (sys < 100 || dia < 60) {
+            badgeClass = "badge-orange";
+            text = "Laag";
+        }
+        container.innerHTML = `<span class="badge ${badgeClass}">${text}</span>`;
+    }
 
-                div.innerHTML = `
-                    <div>
-                        <div class="font-bold text-slate-900 flex items-center gap-2">
-                            <span>Afspraak: ${afspraakTxt}</span>
-                            <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md font-normal">${s.type}</span>
-                            ${s.id === activeId ? '<span class="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full">Actief</span>' : ''}
-                        </div>
-                        <div class="text-xs text-slate-500 mt-1">Start: ${startTxt} | Stop: ${stopTxt}</div>
-                    </div>
-                    <div class="flex flex-wrap gap-2 text-xs">
-                        <button onclick="selectSession('${s.id}')" class="bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition">Bewerken</button>
-                        <button onclick="deleteSession('${s.id}', event)" class="bg-red-50 text-red-600 hover:bg-red-100 font-semibold px-2.5 py-1.5 rounded-lg transition">Verwijder</button>
-                    </div>
-                `;
-                container.appendChild(div);
+    function checkHR(val) {
+        const container = document.getElementById('hrStatus');
+        const hr = parseInt(val);
+        if (isNaN(hr)) {
+            container.innerHTML = "";
+            return;
+        }
+        let badgeClass = "badge-green";
+        let text = "Normaal";
+        if (hr > 100) {
+            badgeClass = "badge-red";
+            text = "Snel (Tachycardie)";
+        } else if (hr < 60) {
+            badgeClass = "badge-orange";
+            text = "Traag (Bradycardie)";
+        }
+        container.innerHTML = `<span class="badge ${badgeClass}">${text}</span>`;
+    }
+
+    function getSessions() {
+        const data = localStorage.getItem('tasker_sessions');
+        return data ? JSON.parse(data) : [];
+    }
+
+    function handleFormSubmit(event) {
+        event.preventDefault();
+        
+        const session = {
+            id: Date.now(),
+            startDate: document.getElementById('startDate').value,
+            endDate: document.getElementById('endDate').value,
+            preWeight: document.getElementById('preWeight').value,
+            dryWeight: document.getElementById('dryWeight').value,
+            uf: document.getElementById('ufResult').innerText,
+            bloodPressure: document.getElementById('bloodPressure').value,
+            heartRate: document.getElementById('heartRate').value,
+            notes: document.getElementById('notes').value,
+            timestamp: new Date().toISOString()
+        };
+
+        let sessions = getSessions();
+        sessions.unshift(session);
+        localStorage.setItem('tasker_sessions', JSON.stringify(sessions));
+
+        loadSessions();
+        sendToGoogleSheet(session);
+        
+        alert("Sessie lokaal opgeslagen!");
+        document.getElementById('dialysisForm').reset();
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('endDate').value = today;
+        document.getElementById('dryWeight').value = "109.0";
+        calculateUF();
+    }
+
+    function loadSessions() {
+        const sessions = getSessions();
+        const tbody = document.getElementById('sessionsTableBody');
+        tbody.innerHTML = "";
+
+        if (sessions.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#888;">Nog geen sessies opgeslagen.</td></tr>`;
+            return;
+        }
+
+        sessions.forEach((s) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${s.startDate} t/m<br>${s.endDate}</td>
+                <td>Pre: ${s.preWeight}kg<br>Droog: ${s.dryWeight}kg</td>
+                <td><strong>${s.uf} L</strong></td>
+                <td>BP: ${s.bloodPressure || '-'}<br>HR: ${s.heartRate || '-'}</td>
+                <td>${s.notes || '-'}</td>
+                <td><button class="btn btn-secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteSession(${s.id})">Wis</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function deleteSession(id) {
+        if (!confirm("Weet u zeker dat u deze sessie wilt verwijderen?")) return;
+        let sessions = getSessions();
+        sessions = sessions.filter(s => s.id !== id);
+        localStorage.setItem('tasker_sessions', JSON.stringify(sessions));
+        loadSessions();
+    }
+
+    function clearLocalData() {
+        if (!confirm("Weet u zeker dat u alle lokale sessies wilt wissen?")) return;
+        localStorage.removeItem('tasker_sessions');
+        loadSessions();
+    }
+
+    function exportToCSV() {
+        const sessions = getSessions();
+        if (sessions.length === 0) {
+            alert("Geen data om te exporteren.");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,Startdatum,Einddatum,PreGewicht,DroogGewicht,UF_Advies,Bloeddruk,Hartslag,Notities,Tijdstip\r\n";
+        sessions.forEach(s => {
+            let row = [
+                s.startDate, s.endDate, s.preWeight, s.dryWeight, s.uf,
+                `"${s.bloodPressure || ''}"`, s.heartRate || '', `"${(s.notes || '').replace(/"/g, '""')}"`, s.timestamp
+            ];
+            csvContent += row.join(",") + "\r\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "tasker_dialyse_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    async function sendToGoogleSheet(session) {
+        const url = document.getElementById('scriptUrl').value.trim();
+        const statusEl = document.getElementById('syncStatus');
+        if (!url) return;
+
+        statusEl.innerText = "Bezig met verzenden naar Google Sheet...";
+        statusEl.style.color = "var(--text-color)";
+
+        try {
+            await fetch(url, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(session)
             });
+            statusEl.innerText = "Succesvol verzonden naar Google Sheet!";
+            statusEl.style.color = "#10b981";
+        } catch (error) {
+            console.error(error);
+            statusEl.innerText = "Fout bij verzenden naar Google Sheet (lokaal is wel opgeslagen).";
+            statusEl.style.color = "#ef4444";
+        }
+    }
+
+    async function syncWithGoogleSheet() {
+        const url = document.getElementById('scriptUrl').value.trim();
+        const statusEl = document.getElementById('syncStatus');
+        if (!url) {
+            alert("Vul eerst een Google Apps Script Web App URL in.");
+            return;
         }
 
-        function editDryWeight() {
-            let val = prompt("Streefgewicht (Dry Weight) in kg:", dryWeight);
-            if(val && !isNaN(val)) {
-                dryWeight = parseFloat(val);
-                localStorage.setItem('lwagt_dry_weight', dryWeight);
-                document.getElementById('displayDry').innerText = dryWeight.toFixed(1);
-                calcUF();
-            }
-        }
-
-        function calcUF() {
-            let pre = parseFloat(document.getElementById('preWeight').value);
-            document.getElementById('pastWeight').value = dryWeight;
-            if (!isNaN(pre)) {
-                let uf = pre - dryWeight + 0.3;
-                document.getElementById('ufAdvies').value = uf.toFixed(2) + " l";
+        statusEl.innerText = "Gegevens ophalen uit Google Sheet...";
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
+                localStorage.setItem('tasker_sessions', JSON.stringify(data));
+                loadSessions();
+                statusEl.innerText = "Succesvol gesynchroniseerd met Google Sheet!";
+                statusEl.style.color = "#10b981";
             } else {
-                document.getElementById('ufAdvies').value = "";
+                statusEl.innerText = "Geen data gevonden in Google Sheet.";
             }
+        } catch (error) {
+            console.error(error);
+            statusEl.innerText = "Kon data niet ophalen (controleer de Script URL).";
+            statusEl.style.color = "#ef4444";
         }
+    }
+</script>
 
-        function checkUfColor() {
-            let gekozen = parseFloat(document.getElementById('gekozenUf').value);
-            let indicator = document.getElementById('ufIndicator');
-            if (isNaN(gekozen)) {
-                indicator.classList.add('hidden');
-                return;
-            }
-            indicator.classList.remove('hidden');
-            if (gekozen >= 4.5) {
-                indicator.className = "mt-1.5 text-xs font-bold px-2.5 py-1 rounded-md inline-block bg-red-100 text-red-700 border border-red-200";
-                indicator.innerText = "UF >= 4.5 (Rood)";
-            } else if (gekozen >= 4.0) {
-                indicator.className = "mt-1.5 text-xs font-bold px-2.5 py-1 rounded-md inline-block bg-orange-100 text-orange-700 border border-orange-200";
-                indicator.innerText = "UF >= 4.0 (Oranje)";
-            } else {
-                indicator.className = "mt-1.5 text-xs font-bold px-2.5 py-1 rounded-md inline-block bg-emerald-100 text-emerald-700 border border-emerald-200";
-                indicator.innerText = "UF < 4.0 (Groen)";
-            }
-        }
-
-        function saveGewicht(e) {
-            e.preventDefault();
-            if (!activeId) { alert("Geen actieve sessie gekozen! Ga naar Afspraken en selecteer of maak een sessie."); return; }
-            let pre = parseFloat(document.getElementById('preWeight').value);
-            let ufAdv = !isNaN(pre) ? (pre - dryWeight + 0.3).toFixed(2) : '';
-            let gekozen = parseFloat(document.getElementById('gekozenUf').value);
-            let werkelijk = document.getElementById('werkelijkUf').value;
-
-            if(!allData[activeId]) allData[activeId] = {};
-            allData[activeId].gewicht = { preWeight: isNaN(pre) ? '' : pre, pastWeight: dryWeight, ufAdvies: ufAdv, gekozenUf: isNaN(gekozen) ? '' : gekozen, werkelijkUf: werkelijk };
-            localStorage.setItem('lwagt_data', JSON.stringify(allData));
-            alert("Gewicht succesvol opgeslagen!");
-        }
-
-        function saveMedisch(e) {
-            e.preventDefault();
-            if (!activeId) { alert("Geen actieve sessie gekozen!"); return; }
-            if(!allData[activeId]) allData[activeId] = {};
-            allData[activeId].medisch = {
-                sys: document.getElementById('bpSys').value,
-                dia: document.getElementById('bpDia').value,
-                hr: document.getElementById('heartRate').value
-            };
-            localStorage.setItem('lwagt_data', JSON.stringify(allData));
-            alert("Medische gegevens opgeslagen!");
-        }
-
-        function saveVerpleging(e) {
-            e.preventDefault();
-            if (!activeId) { alert("Geen actieve sessie gekozen!"); return; }
-            if(!allData[activeId]) allData[activeId] = {};
-            allData[activeId].verpleging = { notes: document.getElementById('verplegingNotes').value };
-            localStorage.setItem('lwagt_data', JSON.stringify(allData));
-            alert("Verpleging notities opgeslagen!");
-        }
-
-        function saveOpmerking(e) {
-            e.preventDefault();
-            if (!activeId) { alert("Geen actieve sessie gekozen!"); return; }
-            if(!allData[activeId]) allData[activeId] = {};
-            allData[activeId].opmerking = { text: document.getElementById('opmerkingText').value };
-            localStorage.setItem('lwagt_data', JSON.stringify(allData));
-            alert("Opmerking opgeslagen!");
-        }
-
-        function loadSessionDataIntoForm() {
-            if (!activeId || !allData[activeId]) return;
-            let d = allData[activeId];
-            if (d.gewicht) {
-                document.getElementById('preWeight').value = d.gewicht.preWeight !== undefined ? d.gewicht.preWeight : '';
-                document.getElementById('pastWeight').value = d.gewicht.pastWeight || dryWeight;
-                document.getElementById('gekozenUf').value = d.gewicht.gekozenUf !== undefined ? d.gewicht.gekozenUf : '';
-                document.getElementById('werkelijkUf').value = d.gewicht.werkelijkUf || '';
-                calcUF();
-                checkUfColor();
-            }
-            if (d.medisch) {
-                document.getElementById('bpSys').value = d.medisch.sys || '';
-                document.getElementById('bpDia').value = d.medisch.dia || '';
-                document.getElementById('heartRate').value = d.medisch.hr || '';
-            }
-            if (d.verpleging) {
-                document.getElementById('verplegingNotes').value = d.verpleging.notes || '';
-            }
-            if (d.opmerking) {
-                document.getElementById('opmerkingText').value = d.opmerking.text || '';
-            }
-        }
-    </script>
 </body>
 </html>
