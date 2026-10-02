@@ -80,6 +80,8 @@
         .btn:hover { background-color: var(--primary-hover); }
         .btn-secondary { background-color: #0d9488; }
         .btn-secondary:hover { background-color: #0f766e; }
+        .btn-warning { background-color: #f59e0b; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; margin-right: 4px; }
+        .btn-warning:hover { background-color: #d97706; }
         .btn-danger { background-color: #ef4444; padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; color: white; border: none; cursor: pointer; }
         .btn-danger:hover { background-color: #dc2626; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
@@ -137,13 +139,14 @@
 
     <!-- Meting Invoeren -->
     <div class="card">
-        <h3>Gewicht & UF Meting Invoeren</h3>
+        <h3 id="formTitle">Gewicht & UF Meting Invoeren</h3>
         <div class="info-box">
             Formule UF-advies: <strong>Pre-gewicht - Drooggewicht + 0,3</strong>.<br>
             Kleurcodes UF-advies: <span style="color:#166534; font-weight:bold;">Groen</span> (&lt; 4.0), <span style="color:#c2410c; font-weight:bold;">Oranje</span> (&ge; 4.0), <span style="color:#991b1b; font-weight:bold;">Rood</span> (&ge; 4.5).<br>
             <em>Let op: Alleen Afspraak en Pre-gewicht zijn verplicht. Post-gewicht, werkelijke UF en gebruikte UF zijn optioneel.</em>
         </div>
         <form id="weightForm" onsubmit="saveWeightEntry(event)">
+            <input type="hidden" id="editEntryId" value="">
             <div class="form-grid">
                 <div class="form-group">
                     <label for="linkedAppointmentId">Koppel aan Afspraak (ID) *</label>
@@ -169,8 +172,9 @@
                     <label for="usedUf">Gebruikte UF (L) (optioneel)</label>
                     <input type="number" step="0.1" id="usedUf" placeholder="bijv. 4.2">
                 </div>
-                <div class="form-group" style="display: flex; align-items: flex-end;">
-                    <button type="submit" class="btn" style="width: 100%;">Meting Opslaan</button>
+                <div class="form-group" style="display: flex; align-items: flex-end; gap: 10px;">
+                    <button type="submit" id="submitBtn" class="btn" style="flex: 1;">Meting Opslaan</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-secondary" style="display: none;" onclick="resetForm()">Annuleren</button>
                 </div>
             </div>
         </form>
@@ -191,7 +195,7 @@
                         <th>UF-advies</th>
                         <th>Werk. UF</th>
                         <th>Gebr. UF</th>
-                        <th>Actie</th>
+                        <th>Acties</th>
                     </tr>
                 </thead>
                 <tbody id="weightTableBody">
@@ -334,6 +338,7 @@
 
     function saveWeightEntry(e) {
         e.preventDefault();
+        const editId = document.getElementById('editEntryId').value;
         const linkedAppointmentId = document.getElementById('linkedAppointmentId').value;
         const preWeight = parseFloat(document.getElementById('preWeight').value);
         const dryWeight = getDryWeight();
@@ -345,7 +350,6 @@
         const postWeightInput = document.getElementById('postWeight').value;
         const postWeight = postWeightInput !== "" ? parseFloat(postWeightInput) : null;
 
-        // Werkelijke UF = Drooggewicht - Postgewicht (of Postgewicht - Drooggewicht afhankelijk van definitie; hier Drooggewicht - Postgewicht)
         let actualUf = null;
         if (postWeight !== null && !isNaN(postWeight)) {
             actualUf = Math.round((dryWeight - postWeight) * 10) / 10;
@@ -354,28 +358,76 @@
         const usedUfInput = document.getElementById('usedUf').value;
         const usedUf = usedUfInput !== "" ? parseFloat(usedUfInput) : null;
 
-        const entry = {
-            id: 'w_' + Date.now(),
-            linkedAppointmentId,
-            preWeight,
-            postWeight,
-            dryWeight,
-            uf: ufAdvies,
-            actualUf,
-            usedUf: usedUf !== null && !isNaN(usedUf) ? usedUf : null,
-            timestamp: new Date().toISOString()
-        };
-
         let entries = getWeightEntries();
-        entries = entries.filter(item => item.linkedAppointmentId !== linkedAppointmentId);
-        entries.unshift(entry);
+
+        if (editId) {
+            // Bestaande bewerken
+            entries = entries.map(item => {
+                if (item.id === editId) {
+                    return {
+                        ...item,
+                        linkedAppointmentId,
+                        preWeight,
+                        postWeight,
+                        dryWeight,
+                        uf: ufAdvies,
+                        actualUf,
+                        usedUf: usedUf !== null && !isNaN(usedUf) ? usedUf : null
+                    };
+                }
+                return item;
+            });
+            alert("Gewicht & UF meting succesvol bijgewerkt!");
+        } else {
+            // Nieuwe toevoegen
+            const entry = {
+                id: 'w_' + Date.now(),
+                linkedAppointmentId,
+                preWeight,
+                postWeight,
+                dryWeight,
+                uf: ufAdvies,
+                actualUf,
+                usedUf: usedUf !== null && !isNaN(usedUf) ? usedUf : null,
+                timestamp: new Date().toISOString()
+            };
+            entries = entries.filter(item => item.linkedAppointmentId !== linkedAppointmentId);
+            entries.unshift(entry);
+            alert("Gewicht & UF meting succesvol opgeslagen!");
+        }
 
         localStorage.setItem('tasker_weight_entries_v3', JSON.stringify(entries));
-
-        alert("Gewicht & UF meting succesvol opgeslagen!");
-        document.getElementById('weightForm').reset();
-        document.getElementById('ufPreview').textContent = "- kg";
+        resetForm();
         loadWeightEntries();
+    }
+
+    function editWeightEntry(id) {
+        const entries = getWeightEntries();
+        const entry = entries.find(item => item.id === id);
+        if (!entry) return;
+
+        document.getElementById('editEntryId').value = entry.id;
+        document.getElementById('linkedAppointmentId').value = entry.linkedAppointmentId;
+        document.getElementById('preWeight').value = entry.preWeight;
+        document.getElementById('postWeight').value = (entry.postWeight !== null && !isNaN(entry.postWeight)) ? entry.postWeight : '';
+        document.getElementById('usedUf').value = (entry.usedUf !== null && !isNaN(entry.usedUf)) ? entry.usedUf : '';
+        
+        calcPreview();
+
+        document.getElementById('formTitle').textContent = "Gewicht & UF Meting Bewerken";
+        document.getElementById('submitBtn').textContent = "Wijzigingen Opslaan";
+        document.getElementById('cancelEditBtn').style.display = "inline-block";
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('weightForm').reset();
+        document.getElementById('editEntryId').value = "";
+        document.getElementById('ufPreview').textContent = "- kg";
+        document.getElementById('formTitle').textContent = "Gewicht & UF Meting Invoeren";
+        document.getElementById('submitBtn').textContent = "Meting Opslaan";
+        document.getElementById('cancelEditBtn').style.display = "none";
     }
 
     function deleteWeightEntry(id) {
@@ -417,7 +469,10 @@
                 <td><span class="badge ${badgeClass}">${item.uf.toFixed(1)} kg</span></td>
                 <td>${actualUfDisplay}</td>
                 <td>${usedUfDisplay}</td>
-                <td><button class="btn-danger" onclick="deleteWeightEntry('${item.id}')">Wis</button></td>
+                <td>
+                    <button class="btn-warning" onclick="editWeightEntry('${item.id}')">Bewerk</button>
+                    <button class="btn-danger" onclick="deleteWeightEntry('${item.id}')">Wis</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
