@@ -76,7 +76,7 @@
 <body>
 <div class="container">
     <h1>Tasker - Afspraak Dialyse</h1>
-    <div class="subtitle">Beheer uw dialyse afspraken, tijden, soort, herhalingen en herhaling einddatum.</div>
+    <div class="subtitle">Beheer uw dialyse afspraken (start- en stoptijden zijn niet verplicht).</div>
     
     <div class="card">
         <h3>Nieuwe Afspraak Inplannen</h3>
@@ -87,12 +87,12 @@
                     <input type="datetime-local" id="appDateTime" required>
                 </div>
                 <div class="form-group">
-                    <label for="startDateTime">Start Datum & Tijd</label>
-                    <input type="datetime-local" id="startDateTime" required>
+                    <label for="startDateTime">Start Datum & Tijd (Optioneel)</label>
+                    <input type="datetime-local" id="startDateTime">
                 </div>
                 <div class="form-group">
-                    <label for="stopDateTime">Stop Datum & Tijd</label>
-                    <input type="datetime-local" id="stopDateTime" required>
+                    <label for="stopDateTime">Stop Datum & Tijd (Optioneel)</label>
+                    <input type="datetime-local" id="stopDateTime">
                 </div>
                 <div class="form-group">
                     <label for="dialysisType">Soort Dialyse</label>
@@ -152,6 +152,7 @@
         
         const currentFormatted = `${year}-${month}-${day}T${hours}:${minutes}`;
         document.getElementById('appDateTime').value = currentFormatted;
+        
         document.getElementById('startDateTime').value = currentFormatted;
         
         const stopDate = new Date(now.getTime() + 8 * 60 * 60 * 1000);
@@ -169,7 +170,7 @@
     });
 
     function getAppointments() {
-        return JSON.parse(localStorage.getItem('tasker_appointments_v3') || '[]');
+        return JSON.parse(localStorage.getItem('tasker_appointments_v4') || '[]');
     }
 
     function saveAppointment(e) {
@@ -197,7 +198,7 @@
         list = list.filter(item => item.id !== uniqueId);
         list.unshift(newAppointment);
         
-        localStorage.setItem('tasker_appointments_v3', JSON.stringify(list));
+        localStorage.setItem('tasker_appointments_v4', JSON.stringify(list));
 
         alert("Afspraak opgeslagen! (ID: " + uniqueId + ")");
         loadAppointments();
@@ -220,9 +221,17 @@
                 recInfo += `<br><small>t/m ${item.recurrenceEndDate}</small>`;
             }
 
+            let startStopText = "Niet ingevuld";
+            if (item.startDateTime || item.stopDateTime) {
+                const startStr = item.startDateTime ? item.startDateTime.replace('T', ' ') : '-';
+                const stopStr = item.stopDateTime ? item.stopDateTime.replace('T', ' ') : '-';
+                startStrText = `Start: ${startStr}<br>Stop: ${stopStr}`;
+                startStopText = `Start: ${startStr}<br>Stop: ${stopStr}`;
+            }
+
             tr.innerHTML = `
                 <td><strong>${item.id}</strong><br><small>${item.appDateTime.replace('T', ' ')}</small></td>
-                <td>Start: ${item.startDateTime.replace('T', ' ')}<br>Stop: ${item.stopDateTime.replace('T', ' ')}</td>
+                <td>${startStopText}</td>
                 <td><span class="badge">${item.dialysisType}</span></td>
                 <td>${recInfo}</td>
                 <td><button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteAppointment('${item.id}')">Wis</button></td>
@@ -234,7 +243,7 @@
     function deleteAppointment(id) {
         if (!confirm("Weet u zeker dat u deze afspraak wilt verwijderen?")) return;
         let list = getAppointments().filter(item => item.id !== id);
-        localStorage.setItem('tasker_appointments_v3', JSON.stringify(list));
+        localStorage.setItem('tasker_appointments_v4', JSON.stringify(list));
         loadAppointments();
     }
 </script>
